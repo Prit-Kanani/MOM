@@ -28,35 +28,66 @@ namespace MoM.Api.Models
         [MaxLength(50)]
         public string? Time { get; set; }
 
-        [MaxLength(200)]
-        public string? Venue { get; set; }
-
-        [MaxLength(200)]
-        public string? Facilitator { get; set; }
-
-        [MaxLength(200)]
-        public string? Chairperson { get; set; }
-
-        [MaxLength(200)]
-        public string? Secretary { get; set; }
-
         public byte[]? Logo { get; set; }
 
-        public List<MeetingUser> MeetingUsers { get; set; } = new();
+        public List<MeetingUserMap> UserMappings { get; set; } = new();
+        public List<MeetingVenueMap> VenueMappings { get; set; } = new();
         public List<AgendaItem> Agendas { get; set; } = new();
         public List<ActionItem> ActionItems { get; set; } = new();
     }
 
-    public class MeetingUser
+    public class AppUser
     {
         public int Id { get; set; }
-        public int MeetingId { get; set; }
 
         [Required]
         [MaxLength(200)]
         public string UserName { get; set; } = string.Empty;
 
+        public List<MeetingUserMap> MeetingMappings { get; set; } = new();
+    }
+
+    public class Venue
+    {
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(200)]
+        public string VenueName { get; set; } = string.Empty;
+
+        public List<MeetingVenueMap> MeetingMappings { get; set; } = new();
+    }
+
+    public class MeetingUserMap
+    {
+        public int Id { get; set; }
+        public int MeetingId { get; set; }
+        public Meeting Meeting { get; set; } = null!;
+        public int UserId { get; set; }
+        public AppUser User { get; set; } = null!;
+
+        [Required]
+        [MaxLength(50)]
+        public string Role { get; set; } = MeetingRoles.Attendee;
+
         public bool IsPresent { get; set; }
+    }
+
+    public class MeetingVenueMap
+    {
+        public int Id { get; set; }
+        public int MeetingId { get; set; }
+        public Meeting Meeting { get; set; } = null!;
+        public int VenueId { get; set; }
+        public Venue Venue { get; set; } = null!;
+    }
+
+    public static class MeetingRoles
+    {
+        public const string Facilitator = "Facilitator";
+        public const string Chairperson = "Chairperson";
+        public const string Secretary = "Secretary";
+        public const string Attendee = "Attendee";
     }
 
     public class AgendaItem
@@ -68,8 +99,8 @@ namespace MoM.Api.Models
         [MaxLength(500)]
         public string Topic { get; set; } = string.Empty;
 
-        [MaxLength(200)]
-        public string Owner { get; set; } = string.Empty;
+        public int? OwnerUserId { get; set; }
+        public AppUser? OwnerUser { get; set; }
     }
 
     public class ActionItem
@@ -81,8 +112,8 @@ namespace MoM.Api.Models
         [MaxLength(500)]
         public string Task { get; set; } = string.Empty;
 
-        [MaxLength(200)]
-        public string Responsibility { get; set; } = string.Empty;
+        public int? ResponsibilityUserId { get; set; }
+        public AppUser? ResponsibilityUser { get; set; }
 
         public DateTime? Deadline { get; set; }
     }

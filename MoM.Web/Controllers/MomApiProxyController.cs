@@ -26,6 +26,18 @@ namespace MoM.Web.Controllers
             return ForwardAsync("api/meetings/stats", HttpMethod.Get);
         }
 
+        [HttpGet("lookups/users")]
+        public Task<IActionResult> GetUsers()
+        {
+            return ForwardAsync("api/lookups/users", HttpMethod.Get);
+        }
+
+        [HttpGet("lookups/venues")]
+        public Task<IActionResult> GetVenues()
+        {
+            return ForwardAsync("api/lookups/venues", HttpMethod.Get);
+        }
+
         [HttpGet("meetings/{id:int}")]
         public Task<IActionResult> GetMeeting(int id)
         {

@@ -16,9 +16,14 @@ namespace MoM.Api.Controllers
         public async Task<IActionResult> ExportToPdf(int id)
         {
             var meeting = await _context.Meetings
-                .Include(m => m.MeetingUsers)
+                .Include(m => m.VenueMappings)
+                    .ThenInclude(mv => mv.Venue)
+                .Include(m => m.UserMappings)
+                    .ThenInclude(mu => mu.User)
                 .Include(m => m.Agendas)
+                    .ThenInclude(a => a.OwnerUser)
                 .Include(m => m.ActionItems)
+                    .ThenInclude(a => a.ResponsibilityUser)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
             if (meeting == null) return NotFound();

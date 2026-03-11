@@ -1,0 +1,117 @@
+@{
+    ViewData["Title"] = "Meeting Vault";
+}
+
+<section class="glass-card records-hero">
+    <div class="dashboard-hero-head">
+        <div>
+            <div class="hero-kicker">Meeting Vault</div>
+            <h1>Your saved MOM records</h1>
+            <p>Browse, preview, edit, export, and clean up every MOM from one polished archive.</p>
+        </div>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a asp-action="Dashboard" class="btn-link">Back to Dashboard</a>
+            <a asp-action="Editor" class="btn-primary" style="text-decoration: none;">Create MOM</a>
+        </div>
+    </div>
+</section>
+
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin: 0;">Saved MOM Records</h2>
+    </div>
+
+    <div class="table-shell">
+        <table id="meetingsTable">
+            <thead>
+                <tr>
+                    <th>Meeting No.</th>
+                    <th>Meeting Type</th>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Subject</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="meetingsList">
+                <tr class="table-status-row">
+                    <td colspan="8" style="text-align: center;">Loading meetings...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const API_URL = '/mom-api';
+
+        async function loadMeetings() {
+            try {
+                const response = await fetch(`${API_URL}/meetings`);
+                if (!response.ok) {
+                    throw new Error(`Request failed: ${response.status}`);
+                }
+
+                const meetings = await response.json();
+                const list = document.getElementById('meetingsList');
+
+                if (meetings.length === 0) {
+                    list.innerHTML = '<tr class="table-status-row"><td colspan="8" style="text-align: center;">No MOM records found. Create your first MOM to get started.</td></tr>';
+                    return;
+                }
+
+                list.innerHTML = meetings.map(m => `
+                    <tr>
+                        <td data-label="Meeting No.">${m.meetingNumber || 'N/A'}</td>
+                        <td data-label="Meeting Type">${m.meetingType || 'N/A'}</td>
+                        <td data-label="Date">${new Date(m.date).toLocaleDateString()}</td>
+                        <td data-label="Venue">${m.venueName || 'N/A'}</td>
+                        <td data-label="Subject"><strong>${m.subject}</strong></td>
+                        <td data-label="Present">${m.presentCount}</td>
+                        <td data-label="Absent">${m.absentCount}</td>
+                        <td data-label="Actions" class="actions-cell" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <a href="/Home/Preview/${m.id}" class="action-icon action-view" title="Preview MOM" aria-label="Preview MOM">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="/Home/Editor?id=${m.id}" class="action-icon action-edit" title="Edit MOM" aria-label="Edit MOM">
+                                <i class="fas fa-pen-to-square"></i>
+                            </a>
+                            <a href="${API_URL}/export/${m.id}" target="_blank" class="action-icon action-export" title="Export PDF" aria-label="Export PDF">
+                                <i class="fas fa-file-arrow-down"></i>
+                            </a>
+                            <button type="button" onclick="deleteMeeting(${m.id})" class="action-icon action-delete" title="Delete MOM" aria-label="Delete MOM">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading meetings:', error);
+                document.getElementById('meetingsList').innerHTML = '<tr class="table-status-row"><td colspan="8" style="text-align: center; color: red;">Failed to load meetings. Make sure the API is running.</td></tr>';
+            }
+        }
+
+        async function deleteMeeting(id) {
+            if (!confirm('Are you sure you want to delete this meeting?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/meetings/${id}`, { method: 'DELETE' });
+                if (!response.ok) {
+                    throw new Error(`Delete failed: ${response.status}`);
+                }
+
+                loadMeetings();
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Error deleting MOM record.');
+            }
+        }
+
+        loadMeetings();
+    </script>
+}

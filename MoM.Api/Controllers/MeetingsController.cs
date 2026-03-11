@@ -20,7 +20,9 @@ namespace MoM.Api.Controllers
         {
             var meetings = await _context.Meetings
                 .AsNoTracking()
-                .Include(m => m.MeetingUsers)
+                .Include(m => m.VenueMappings)
+                    .ThenInclude(v => v.Venue)
+                .Include(m => m.UserMappings)
                 .OrderByDescending(m => m.Date)
                 .ToListAsync();
 
@@ -32,15 +34,18 @@ namespace MoM.Api.Controllers
         {
             var meetings = await _context.Meetings
                 .AsNoTracking()
-                .Include(m => m.MeetingUsers)
+                .Include(m => m.VenueMappings)
+                    .ThenInclude(v => v.Venue)
+                .Include(m => m.UserMappings)
+                    .ThenInclude(u => u.User)
                 .OrderBy(m => m.Date)
                 .ToListAsync();
 
-            var stats = new MeetingStatsDto
+            return new MeetingStatsDto
             {
                 TotalMeetings = meetings.Count,
-                TotalPresentAttendees = meetings.Sum(m => m.MeetingUsers.Count(u => u.IsPresent)),
-                TotalAbsentAttendees = meetings.Sum(m => m.MeetingUsers.Count(u => !u.IsPresent)),
+                TotalPresentAttendees = meetings.Sum(m => m.UserMappings.Count(u => u.Role == MeetingRoles.Attendee && u.IsPresent)),
+                TotalAbsentAttendees = meetings.Sum(m => m.UserMappings.Count(u => u.Role == MeetingRoles.Attendee && !u.IsPresent)),
                 MeetingVolume = meetings
                     .GroupBy(m => new { m.Date.Year, m.Date.Month })
                     .Select(g => new MeetingVolumePointDto
@@ -53,16 +58,38 @@ namespace MoM.Api.Controllers
                     .Select(m => new MeetingAttendancePointDto
                     {
                         MeetingId = m.Id,
-                        Label = !string.IsNullOrWhiteSpace(m.MeetingNumber)
-                            ? m.MeetingNumber!
-                            : m.Date.ToString("dd MMM"),
-                        PresentCount = m.MeetingUsers.Count(u => u.IsPresent),
-                        AbsentCount = m.MeetingUsers.Count(u => !u.IsPresent)
+                        Label = !string.IsNullOrWhiteSpace(m.MeetingNumber) ? m.MeetingNumber! : m.Date.ToString("dd MMM"),
+                        PresentCount = m.UserMappings.Count(u => u.Role == MeetingRoles.Attendee && u.IsPresent),
+                        AbsentCount = m.UserMappings.Count(u => u.Role == MeetingRoles.Attendee && !u.IsPresent)
                     })
+                    .ToList(),
+                UserAttendance = meetings
+                    .SelectMany(m => m.UserMappings)
+                    .Where(u => u.Role == MeetingRoles.Attendee)
+                    .GroupBy(u => new { u.UserId, u.User.UserName })
+                    .Select(g => new UserAttendancePointDto
+                    {
+                        UserId = g.Key.UserId,
+                        UserName = g.Key.UserName,
+                        PresentCount = g.Count(x => x.IsPresent),
+                        AbsentCount = g.Count(x => !x.IsPresent)
+                    })
+                    .OrderByDescending(x => x.TotalCount)
+                    .ThenBy(x => x.UserName)
+                    .ToList(),
+                VenueMeetings = meetings
+                    .SelectMany(m => m.VenueMappings)
+                    .GroupBy(v => new { v.VenueId, v.Venue.VenueName })
+                    .Select(g => new VenueMeetingPointDto
+                    {
+                        VenueId = g.Key.VenueId,
+                        VenueName = g.Key.VenueName,
+                        MeetingCount = g.Count()
+                    })
+                    .OrderByDescending(x => x.MeetingCount)
+                    .ThenBy(x => x.VenueName)
                     .ToList()
             };
-
-            return stats;
         }
 
         [HttpGet("{id:int}")]
@@ -70,12 +97,17 @@ namespace MoM.Api.Controllers
         {
             var meeting = await _context.Meetings
                 .AsNoTracking()
-                .Include(m => m.MeetingUsers)
+                .Include(m => m.VenueMappings)
+                    .ThenInclude(v => v.Venue)
+                .Include(m => m.UserMappings)
+                    .ThenInclude(u => u.User)
                 .Include(m => m.Agendas)
+                    .ThenInclude(a => a.OwnerUser)
                 .Include(m => m.ActionItems)
+                    .ThenInclude(a => a.ResponsibilityUser)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (meeting == null)
+            if (meeting is null)
             {
                 return NotFound();
             }
@@ -91,11 +123,12 @@ namespace MoM.Api.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            var entity = meeting.ToEntity();
+            var entity = await meeting.ToEntityAsync(_context);
             _context.Meetings.Add(entity);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetMeeting), new { id = entity.Id }, entity.ToDto());
+            var created = await LoadMeetingGraphAsync(entity.Id);
+            return CreatedAtAction(nameof(GetMeeting), new { id = entity.Id }, created!.ToDto());
         }
 
         [HttpPut("{id:int}")]
@@ -107,17 +140,21 @@ namespace MoM.Api.Controllers
             }
 
             var existingMeeting = await _context.Meetings
-                .Include(m => m.MeetingUsers)
+                .Include(m => m.VenueMappings)
+                .Include(m => m.UserMappings)
+                    .ThenInclude(u => u.User)
                 .Include(m => m.Agendas)
+                    .ThenInclude(a => a.OwnerUser)
                 .Include(m => m.ActionItems)
+                    .ThenInclude(a => a.ResponsibilityUser)
                 .FirstOrDefaultAsync(m => m.Id == id);
 
-            if (existingMeeting == null)
+            if (existingMeeting is null)
             {
                 return NotFound();
             }
 
-            meeting.ApplyToEntity(existingMeeting);
+            await meeting.ApplyToEntityAsync(existingMeeting, _context);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -127,7 +164,7 @@ namespace MoM.Api.Controllers
         public async Task<IActionResult> DeleteMeeting(int id)
         {
             var meeting = await _context.Meetings.FindAsync(id);
-            if (meeting == null)
+            if (meeting is null)
             {
                 return NotFound();
             }
@@ -145,14 +182,33 @@ namespace MoM.Api.Controllers
                 ModelState.AddModelError(nameof(meeting.Date), "Date is required.");
             }
 
-            if (meeting.MeetingUsers.Any(u => u.Id < 0) ||
-                meeting.Agendas.Any(a => a.Id < 0) ||
-                meeting.ActionItems.Any(a => a.Id < 0))
+            if ((meeting.Facilitator?.Id ?? 0) < 0 ||
+                (meeting.Chairperson?.Id ?? 0) < 0 ||
+                (meeting.Secretary?.Id ?? 0) < 0 ||
+                (meeting.Venue?.Id ?? 0) < 0 ||
+                meeting.Attendees.Any(a => a.MappingId < 0 || (a.UserId ?? 0) < 0) ||
+                meeting.Agendas.Any(a => a.Id < 0 || (a.Owner?.Id ?? 0) < 0) ||
+                meeting.ActionItems.Any(a => a.Id < 0 || (a.Responsibility?.Id ?? 0) < 0))
             {
-                ModelState.AddModelError(nameof(meeting.MeetingUsers), "Child item ids must be zero or greater.");
+                ModelState.AddModelError(nameof(meeting.Attendees), "Ids must be zero or greater.");
             }
 
             return ModelState.IsValid;
+        }
+
+        private Task<Meeting?> LoadMeetingGraphAsync(int id)
+        {
+            return _context.Meetings
+                .AsNoTracking()
+                .Include(m => m.VenueMappings)
+                    .ThenInclude(v => v.Venue)
+                .Include(m => m.UserMappings)
+                    .ThenInclude(u => u.User)
+                .Include(m => m.Agendas)
+                    .ThenInclude(a => a.OwnerUser)
+                .Include(m => m.ActionItems)
+                    .ThenInclude(a => a.ResponsibilityUser)
+                .FirstOrDefaultAsync(m => m.Id == id);
         }
     }
 }

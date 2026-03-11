@@ -62,15 +62,18 @@
                         <div class="preview-field"><span>Meeting No.</span><strong>${escapeHtml(data.meetingNumber || 'N/A')}</strong></div>
                         <div class="preview-field"><span>Date</span><strong>${new Date(data.date).toLocaleDateString()}</strong></div>
                         <div class="preview-field"><span>Time</span><strong>${escapeHtml(data.time || 'N/A')}</strong></div>
-                        <div class="preview-field"><span>Venue</span><strong>${escapeHtml(data.venue || 'N/A')}</strong></div>
-                        <div class="preview-field"><span>Facilitator</span><strong>${escapeHtml(data.facilitator || 'N/A')}</strong></div>
-                        <div class="preview-field"><span>Chairperson</span><strong>${escapeHtml(data.chairperson || 'N/A')}</strong></div>
+                        <div class="preview-field"><span>Venue</span><strong>${escapeHtml(data.venue?.name || 'N/A')}</strong></div>
+                        <div class="preview-field"><span>Facilitator</span><strong>${escapeHtml(data.facilitator?.name || 'N/A')}</strong></div>
+                        <div class="preview-field"><span>Chairperson</span><strong>${escapeHtml(data.chairperson?.name || 'N/A')}</strong></div>
+                        <div class="preview-field"><span>Secretary</span><strong>${escapeHtml(data.secretary?.name || 'N/A')}</strong></div>
+                        <div class="preview-field"><span>Present Count</span><strong>${data.presentCount || 0}</strong></div>
+                        <div class="preview-field"><span>Absent Count</span><strong>${data.absentCount || 0}</strong></div>
                     </div>
 
                     <div class="preview-section">
                         <h2>Attendees</h2>
                         <div class="attendee-preview-list">
-                            ${renderList(data.meetingUsers || [], 'No attendees added.', attendee => `
+                            ${renderList(data.attendees || [], 'No attendees added.', attendee => `
                                 <div class="attendee-pill ${attendee.isPresent ? 'attendee-present' : 'attendee-absent'}">
                                     <span>${escapeHtml(attendee.userName)}</span>
                                     <strong>${attendee.isPresent ? 'Present' : 'Absent'}</strong>
@@ -84,7 +87,7 @@
                         ${renderList(data.agendas || [], 'No agenda items added.', agenda => `
                             <div class="preview-row-card">
                                 <strong>${escapeHtml(agenda.topic)}</strong>
-                                <span>${escapeHtml(agenda.owner || 'No owner')}</span>
+                                <span>${escapeHtml(agenda.owner?.name || 'No owner')}</span>
                             </div>
                         `)}
                     </div>
@@ -94,7 +97,7 @@
                         ${renderList(data.actionItems || [], 'No action items added.', action => `
                             <div class="preview-row-card">
                                 <strong>${escapeHtml(action.task)}</strong>
-                                <span>${escapeHtml(action.responsibility || 'No owner')}</span>
+                                <span>${escapeHtml(action.responsibility?.name || 'No owner')}</span>
                                 <small>${action.deadline ? new Date(action.deadline).toLocaleDateString() : 'No due date'}</small>
                             </div>
                         `)}

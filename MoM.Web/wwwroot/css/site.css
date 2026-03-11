@@ -289,6 +289,97 @@ main.container {
     gap: 18px;
 }
 
+.analytics-stack {
+    display: grid;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.records-hero {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(238, 243, 251, 0.88));
+    border-radius: 28px;
+}
+
+.section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.section-head h2 {
+    margin: 8px 0 0;
+}
+
+.insight-list {
+    display: grid;
+    gap: 12px;
+}
+
+.insight-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.2fr) minmax(0, 2fr) 52px;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(67, 97, 238, 0.04);
+    border: 1px solid rgba(67, 97, 238, 0.08);
+    animation: riseIn 700ms ease both;
+}
+
+.insight-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.insight-copy strong {
+    color: var(--text-dark);
+}
+
+.insight-copy span,
+.empty-state {
+    color: #60708d;
+}
+
+.insight-meter {
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(67, 97, 238, 0.09);
+    overflow: hidden;
+}
+
+.insight-meter-fill {
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #1ca57a, #4cc9f0);
+    animation: growBar 900ms ease forwards;
+}
+
+.venue-fill {
+    background: linear-gradient(135deg, #4361ee, #4cc9f0);
+}
+
+.insight-value {
+    text-align: right;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+@keyframes riseIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .chart-title {
     margin-bottom: 16px;
     font-weight: 700;
@@ -533,6 +624,128 @@ tr:hover {
     border-color: var(--primary);
 }
 
+.lookup-combobox {
+    position: relative;
+    flex: 1 1 220px;
+    min-width: 0;
+}
+
+.lookup-combobox .lookup-input {
+    padding-right: 46px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 247, 255, 0.94));
+    border-color: rgba(67, 97, 238, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.lookup-combobox .lookup-input:focus {
+    border-color: rgba(67, 97, 238, 0.45);
+    box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.10);
+}
+
+.lookup-toggle {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.12), rgba(76, 201, 240, 0.18));
+    color: var(--primary);
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.lookup-toggle:hover {
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.18), rgba(76, 201, 240, 0.24));
+}
+
+.lookup-open .lookup-toggle {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.lookup-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    z-index: 30;
+    display: none;
+    padding: 8px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.98);
+    border: 1px solid rgba(67, 97, 238, 0.12);
+    box-shadow: 0 22px 44px rgba(24, 38, 74, 0.16);
+    backdrop-filter: blur(14px);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.lookup-open-up .lookup-menu {
+    top: auto;
+    bottom: calc(100% + 10px);
+}
+
+.lookup-open .lookup-menu {
+    display: grid;
+    gap: 6px;
+}
+
+.lookup-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.lookup-option:hover {
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.09), rgba(76, 201, 240, 0.10));
+    transform: translateX(2px);
+}
+
+.lookup-option-title {
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.lookup-option-tag {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(67, 97, 238, 0.10);
+    color: var(--primary);
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.lookup-option-create {
+    background: linear-gradient(135deg, rgba(76, 201, 240, 0.10), rgba(67, 97, 238, 0.08));
+}
+
+.lookup-option-create .lookup-option-tag {
+    background: rgba(15, 166, 120, 0.12);
+    color: #0c8d68;
+}
+
+.lookup-empty {
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(67, 97, 238, 0.05);
+    color: #60708d;
+    font-size: 0.92rem;
+}
+
 .dynamic-list-row {
     display: flex;
     gap: 10px;
@@ -774,6 +987,14 @@ tr:hover {
         grid-template-columns: 1fr;
     }
 
+    .insight-row {
+        grid-template-columns: 1fr;
+    }
+
+    .insight-value {
+        text-align: left;
+    }
+
     .preview-grid {
         grid-template-columns: 1fr;
     }
@@ -876,6 +1097,7 @@ tr:hover {
     }
 
     .dynamic-list-row .form-input,
+    .dynamic-list-row .lookup-combobox,
     .dynamic-list-row .btn-icon {
         width: 100% !important;
     }

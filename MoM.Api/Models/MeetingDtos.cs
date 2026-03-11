@@ -9,12 +9,10 @@ namespace MoM.Api.Models
         public string Subject { get; set; } = string.Empty;
         public string? MeetingNumber { get; set; }
         public string? MeetingType { get; set; }
-        public string? Description { get; set; }
         public DateTime Date { get; set; }
-        public string? Venue { get; set; }
+        public string? VenueName { get; set; }
         public int PresentCount { get; set; }
         public int AbsentCount { get; set; }
-        public int TotalAttendees { get; set; }
     }
 
     public class MeetingDto
@@ -27,15 +25,15 @@ namespace MoM.Api.Models
         public string? Description { get; set; }
         public DateTime Date { get; set; }
         public string? Time { get; set; }
-        public string? Venue { get; set; }
-        public string? Facilitator { get; set; }
-        public string? Chairperson { get; set; }
-        public string? Secretary { get; set; }
+        public LookupSelectionDto? Venue { get; set; }
+        public LookupSelectionDto? Facilitator { get; set; }
+        public LookupSelectionDto? Chairperson { get; set; }
+        public LookupSelectionDto? Secretary { get; set; }
         public string? Logo { get; set; }
         public int PresentCount { get; set; }
         public int AbsentCount { get; set; }
         public int TotalAttendees { get; set; }
-        public List<MeetingUserDto> MeetingUsers { get; set; } = new();
+        public List<MeetingAttendeeDto> Attendees { get; set; } = new();
         public List<AgendaItemDto> Agendas { get; set; } = new();
         public List<ActionItemDto> ActionItems { get; set; } = new();
     }
@@ -65,39 +63,45 @@ namespace MoM.Api.Models
         [MaxLength(50)]
         public string? Time { get; set; }
 
-        [MaxLength(200)]
-        public string? Venue { get; set; }
-
-        [MaxLength(200)]
-        public string? Facilitator { get; set; }
-
-        [MaxLength(200)]
-        public string? Chairperson { get; set; }
-
-        [MaxLength(200)]
-        public string? Secretary { get; set; }
-
+        public LookupSelectionUpsertDto? Venue { get; set; }
+        public LookupSelectionUpsertDto? Facilitator { get; set; }
+        public LookupSelectionUpsertDto? Chairperson { get; set; }
+        public LookupSelectionUpsertDto? Secretary { get; set; }
         public string? Logo { get; set; }
-
-        public List<MeetingUserUpsertDto> MeetingUsers { get; set; } = new();
+        public List<MeetingAttendeeUpsertDto> Attendees { get; set; } = new();
         public List<AgendaItemUpsertDto> Agendas { get; set; } = new();
         public List<ActionItemUpsertDto> ActionItems { get; set; } = new();
     }
 
-    public class MeetingUserDto
+    public class LookupSelectionDto
     {
         public int Id { get; set; }
-        public int MeetingId { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class LookupSelectionUpsertDto
+    {
+        public int? Id { get; set; }
+
+        [MaxLength(200)]
+        public string? Name { get; set; }
+    }
+
+    public class MeetingAttendeeDto
+    {
+        public int MappingId { get; set; }
+        public int UserId { get; set; }
         public string UserName { get; set; } = string.Empty;
         public bool IsPresent { get; set; }
     }
 
-    public class MeetingUserUpsertDto
+    public class MeetingAttendeeUpsertDto
     {
-        public int Id { get; set; }
+        public int MappingId { get; set; }
+        public int? UserId { get; set; }
 
         [MaxLength(200)]
-        public string UserName { get; set; } = string.Empty;
+        public string? UserName { get; set; }
 
         public bool IsPresent { get; set; }
     }
@@ -107,7 +111,7 @@ namespace MoM.Api.Models
         public int Id { get; set; }
         public int MeetingId { get; set; }
         public string Topic { get; set; } = string.Empty;
-        public string Owner { get; set; } = string.Empty;
+        public LookupSelectionDto? Owner { get; set; }
     }
 
     public class AgendaItemUpsertDto
@@ -117,8 +121,7 @@ namespace MoM.Api.Models
         [MaxLength(500)]
         public string Topic { get; set; } = string.Empty;
 
-        [MaxLength(200)]
-        public string Owner { get; set; } = string.Empty;
+        public LookupSelectionUpsertDto? Owner { get; set; }
     }
 
     public class ActionItemDto
@@ -126,7 +129,7 @@ namespace MoM.Api.Models
         public int Id { get; set; }
         public int MeetingId { get; set; }
         public string Task { get; set; } = string.Empty;
-        public string Responsibility { get; set; } = string.Empty;
+        public LookupSelectionDto? Responsibility { get; set; }
         public DateTime? Deadline { get; set; }
     }
 
@@ -137,10 +140,15 @@ namespace MoM.Api.Models
         [MaxLength(500)]
         public string Task { get; set; } = string.Empty;
 
-        [MaxLength(200)]
-        public string Responsibility { get; set; } = string.Empty;
+        public LookupSelectionUpsertDto? Responsibility { get; set; }
 
         public DateTime? Deadline { get; set; }
+    }
+
+    public class LookupItemDto
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     public class MeetingStatsDto
@@ -150,6 +158,8 @@ namespace MoM.Api.Models
         public int TotalAbsentAttendees { get; set; }
         public List<MeetingVolumePointDto> MeetingVolume { get; set; } = new();
         public List<MeetingAttendancePointDto> MeetingAttendance { get; set; } = new();
+        public List<UserAttendancePointDto> UserAttendance { get; set; } = new();
+        public List<VenueMeetingPointDto> VenueMeetings { get; set; } = new();
     }
 
     public class MeetingVolumePointDto
@@ -164,5 +174,21 @@ namespace MoM.Api.Models
         public string Label { get; set; } = string.Empty;
         public int PresentCount { get; set; }
         public int AbsentCount { get; set; }
+    }
+
+    public class UserAttendancePointDto
+    {
+        public int UserId { get; set; }
+        public string UserName { get; set; } = string.Empty;
+        public int PresentCount { get; set; }
+        public int AbsentCount { get; set; }
+        public int TotalCount => PresentCount + AbsentCount;
+    }
+
+    public class VenueMeetingPointDto
+    {
+        public int VenueId { get; set; }
+        public string VenueName { get; set; } = string.Empty;
+        public int MeetingCount { get; set; }
     }
 }

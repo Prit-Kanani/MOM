@@ -14,6 +14,11 @@ namespace MoM.Web.Controllers
             return View();
         }
 
+        public IActionResult MeetingVault()
+        {
+            return View();
+        }
+
         public IActionResult Editor(int? id)
         {
             ViewBag.MeetingId = id;

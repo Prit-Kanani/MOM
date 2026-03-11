@@ -7,9 +7,10 @@
         <div>
             <div class="hero-kicker">Analytics Dashboard</div>
             <h1>Meeting intelligence at a glance</h1>
-            <p>Track meeting activity, attendance trends, and manage every MOM record from one workspace.</p>
+            <p>Track meeting activity, attendance trends, venue usage, and team participation from one focused analytics workspace.</p>
         </div>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a asp-action="MeetingVault" class="btn-link">Open Meeting Vault</a>
             <a asp-action="Editor" class="btn-primary" style="text-decoration: none;">Create MOM</a>
         </div>
     </div>
@@ -47,32 +48,27 @@
     </div>
 </section>
 
-<div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="margin: 0;">Saved MOM Records</h2>
+<section class="analytics-stack">
+    <div class="chart-card">
+        <div class="section-head">
+            <div>
+                <div class="hero-kicker">User Insights</div>
+                <h2>User Attendance Count</h2>
+            </div>
+        </div>
+        <div id="userAttendanceChart" class="insight-list empty-state">No user attendance data yet.</div>
     </div>
 
-    <div class="table-shell">
-        <table id="meetingsTable">
-            <thead>
-                <tr>
-                    <th>Meeting No.</th>
-                    <th>Meeting Type</th>
-                    <th>Date</th>
-                    <th>Subject</th>
-                    <th>Present</th>
-                    <th>Absent</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="meetingsList">
-                <tr class="table-status-row">
-                    <td colspan="7" style="text-align: center;">Loading meetings...</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="chart-card">
+        <div class="section-head">
+            <div>
+                <div class="hero-kicker">Venue Insights</div>
+                <h2>Venue-wise Meetings Count</h2>
+            </div>
+        </div>
+        <div id="venueMeetingsChart" class="insight-list empty-state">No venue activity yet.</div>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <script>
@@ -92,6 +88,8 @@
 
                 renderMeetingVolume(stats.meetingVolume || []);
                 animateAttendanceRatio(stats.totalPresentAttendees || 0, stats.totalAbsentAttendees || 0);
+                renderUserAttendance(stats.userAttendance || []);
+                renderVenueMeetings(stats.venueMeetings || []);
             } catch (error) {
                 console.error('Stats load failed:', error);
             }
@@ -167,71 +165,54 @@
             requestAnimationFrame(step);
         }
 
-        async function loadMeetings() {
-            try {
-                const response = await fetch(`${API_URL}/meetings`);
-                if (!response.ok) {
-                    throw new Error(`Request failed: ${response.status}`);
-                }
-
-                const meetings = await response.json();
-                const list = document.getElementById('meetingsList');
-
-                if (meetings.length === 0) {
-                    list.innerHTML = '<tr class="table-status-row"><td colspan="7" style="text-align: center;">No MOM records found. Create your first MOM to get started.</td></tr>';
-                    return;
-                }
-
-                list.innerHTML = meetings.map(m => `
-                    <tr>
-                        <td data-label="Meeting No.">${m.meetingNumber || 'N/A'}</td>
-                        <td data-label="Meeting Type">${m.meetingType || 'N/A'}</td>
-                        <td data-label="Date">${new Date(m.date).toLocaleDateString()}</td>
-                        <td data-label="Subject"><strong>${m.subject}</strong></td>
-                        <td data-label="Present">${m.presentCount}</td>
-                        <td data-label="Absent">${m.absentCount}</td>
-                        <td data-label="Actions" class="actions-cell" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <a href="/Home/Preview/${m.id}" class="action-icon action-view" title="Preview MOM" aria-label="Preview MOM">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="/Home/Editor?id=${m.id}" class="action-icon action-edit" title="Edit MOM" aria-label="Edit MOM">
-                                <i class="fas fa-pen-to-square"></i>
-                            </a>
-                            <a href="${API_URL}/export/${m.id}" target="_blank" class="action-icon action-export" title="Export PDF" aria-label="Export PDF">
-                                <i class="fas fa-file-arrow-down"></i>
-                            </a>
-                            <button type="button" onclick="deleteMeeting(${m.id})" class="action-icon action-delete" title="Delete MOM" aria-label="Delete MOM">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading meetings:', error);
-                document.getElementById('meetingsList').innerHTML = '<tr class="table-status-row"><td colspan="7" style="text-align: center; color: red;">Failed to load meetings. Make sure the API is running.</td></tr>';
-            }
-        }
-
-        async function deleteMeeting(id) {
-            if (!confirm('Are you sure you want to delete this meeting?')) {
+        function renderUserAttendance(items) {
+            const container = document.getElementById('userAttendanceChart');
+            if (!items.length) {
+                container.className = 'insight-list empty-state';
+                container.textContent = 'No user attendance data yet.';
                 return;
             }
 
-            try {
-                const response = await fetch(`${API_URL}/meetings/${id}`, { method: 'DELETE' });
-                if (!response.ok) {
-                    throw new Error(`Delete failed: ${response.status}`);
-                }
+            const maxTotal = Math.max(...items.map(item => item.totalCount || 0), 1);
+            container.className = 'insight-list';
+            container.innerHTML = items.slice(0, 8).map((item, index) => `
+                <div class="insight-row" style="animation-delay:${index * 90}ms;">
+                    <div class="insight-copy">
+                        <strong>${item.userName}</strong>
+                        <span>${item.presentCount} present • ${item.absentCount} absent</span>
+                    </div>
+                    <div class="insight-meter">
+                        <div class="insight-meter-fill" style="--target-width:${(item.totalCount / maxTotal) * 100}%"></div>
+                    </div>
+                    <div class="insight-value">${item.totalCount}</div>
+                </div>
+            `).join('');
+        }
 
-                loadMeetings();
-                loadStats();
-            } catch (error) {
-                console.error('Delete error:', error);
-                alert('Error deleting MOM record.');
+        function renderVenueMeetings(items) {
+            const container = document.getElementById('venueMeetingsChart');
+            if (!items.length) {
+                container.className = 'insight-list empty-state';
+                container.textContent = 'No venue activity yet.';
+                return;
             }
+
+            const maxCount = Math.max(...items.map(item => item.meetingCount), 1);
+            container.className = 'insight-list';
+            container.innerHTML = items.slice(0, 8).map((item, index) => `
+                <div class="insight-row" style="animation-delay:${index * 90}ms;">
+                    <div class="insight-copy">
+                        <strong>${item.venueName}</strong>
+                        <span>Meeting activity by venue</span>
+                    </div>
+                    <div class="insight-meter venue-meter">
+                        <div class="insight-meter-fill venue-fill" style="--target-width:${(item.meetingCount / maxCount) * 100}%"></div>
+                    </div>
+                    <div class="insight-value">${item.meetingCount}</div>
+                </div>
+            `).join('');
         }
 
         loadStats();
-        loadMeetings();
     </script>
 }

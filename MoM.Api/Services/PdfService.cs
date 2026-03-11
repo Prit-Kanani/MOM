@@ -11,7 +11,7 @@ namespace MoM.Api.Services
         {
             try
             {
-                return CreateDocument(meeting).GeneratePdf();
+                return CreateDocument(meeting, includeLogo: true).GeneratePdf();
             }
             catch
             {
@@ -20,29 +20,11 @@ namespace MoM.Api.Services
                     throw;
                 }
 
-                var fallbackMeeting = new Meeting
-                {
-                    Id = meeting.Id,
-                    Title = meeting.Title,
-                    MeetingNumber = meeting.MeetingNumber,
-                    Subject = meeting.Subject,
-                    Description = meeting.Description,
-                    Date = meeting.Date,
-                    Time = meeting.Time,
-                    Venue = meeting.Venue,
-                    Facilitator = meeting.Facilitator,
-                    Chairperson = meeting.Chairperson,
-                    Secretary = meeting.Secretary,
-                    Logo = null,
-                    Agendas = meeting.Agendas,
-                    ActionItems = meeting.ActionItems
-                };
-
-                return CreateDocument(fallbackMeeting).GeneratePdf();
+                return CreateDocument(meeting, includeLogo: false).GeneratePdf();
             }
         }
 
-        private static IDocument CreateDocument(Meeting meeting)
+        private static IDocument CreateDocument(Meeting meeting, bool includeLogo)
         {
             return Document.Create(container =>
             {
@@ -61,7 +43,7 @@ namespace MoM.Api.Services
                                 .Bold()
                                 .FontSize(16);
 
-                            if (meeting.Logo is not null)
+                            if (includeLogo && meeting.Logo is not null)
                             {
                                 row.ConstantItem(60).Height(50).AlignRight().Image(meeting.Logo, ImageScaling.FitArea);
                             }
@@ -102,8 +84,13 @@ namespace MoM.Api.Services
 
         private static void RenderMeetingDetails(IContainer container, Meeting meeting)
         {
-            var presentCount = meeting.MeetingUsers.Count(u => u.IsPresent);
-            var absentCount = meeting.MeetingUsers.Count(u => !u.IsPresent);
+            var attendees = GetAttendees(meeting);
+            var venue = meeting.VenueMappings.Select(v => v.Venue.VenueName).FirstOrDefault();
+            var facilitator = GetRoleUser(meeting, MeetingRoles.Facilitator);
+            var chairperson = GetRoleUser(meeting, MeetingRoles.Chairperson);
+            var secretary = GetRoleUser(meeting, MeetingRoles.Secretary);
+            var presentCount = attendees.Count(u => u.IsPresent);
+            var absentCount = attendees.Count - presentCount;
 
             container.Table(table =>
             {
@@ -126,27 +113,24 @@ namespace MoM.Api.Services
 
                 table.Cell().Element(DetailLabelCell).Text("Meeting Date & Time");
                 table.Cell().Element(DetailColonCell).Text(":");
-                table.Cell().Element(DetailValueCell).Column(c =>
-                {
-                    c.Item().Text($"{meeting.Date:dd/MM/yyyy} {meeting.Time}".Trim());
-                });
+                table.Cell().Element(DetailValueCell).Text($"{meeting.Date:dd/MM/yyyy} {meeting.Time}".Trim());
                 table.Cell().Element(DetailLabelCell).Text("Venue");
                 table.Cell().Element(DetailColonCell).Text(":");
-                table.Cell().Element(DetailValueCell).Text(meeting.Venue ?? string.Empty);
+                table.Cell().Element(DetailValueCell).Text(venue ?? string.Empty);
 
                 table.Cell().Element(DetailLabelCell).Text("Meeting Subject");
                 table.Cell().Element(DetailColonCell).Text(":");
                 table.Cell().Element(DetailValueCell).Text(meeting.Subject);
-                table.Cell().Element(DetailLabelCell).Text(string.Empty);
-                table.Cell().Element(DetailColonCell).Text(string.Empty);
-                table.Cell().Element(DetailValueCell).Text(string.Empty);
-
-                table.Cell().Element(DetailLabelCell).Text("Meeting Facilitator");
+                table.Cell().Element(DetailLabelCell).Text("Facilitator");
                 table.Cell().Element(DetailColonCell).Text(":");
-                table.Cell().Element(DetailValueCell).Text(meeting.Facilitator ?? meeting.Chairperson ?? string.Empty);
-                table.Cell().Element(DetailLabelCell).Text(string.Empty);
-                table.Cell().Element(DetailColonCell).Text(string.Empty);
-                table.Cell().Element(DetailValueCell).Text(string.Empty);
+                table.Cell().Element(DetailValueCell).Text(facilitator ?? string.Empty);
+
+                table.Cell().Element(DetailLabelCell).Text("Chairperson");
+                table.Cell().Element(DetailColonCell).Text(":");
+                table.Cell().Element(DetailValueCell).Text(chairperson ?? string.Empty);
+                table.Cell().Element(DetailLabelCell).Text("Secretary");
+                table.Cell().Element(DetailColonCell).Text(":");
+                table.Cell().Element(DetailValueCell).Text(secretary ?? string.Empty);
 
                 table.Cell().Element(DetailLabelCell).Text("Present Count");
                 table.Cell().Element(DetailColonCell).Text(":");
@@ -188,7 +172,7 @@ namespace MoM.Api.Services
                     var agenda = meeting.Agendas[index];
                     table.Cell().Element(BodyCell).AlignCenter().Text((index + 1).ToString());
                     table.Cell().Element(BodyCell).Text(agenda.Topic);
-                    table.Cell().Element(BodyCell).AlignCenter().Text(agenda.Owner);
+                    table.Cell().Element(BodyCell).AlignCenter().Text(agenda.OwnerUser?.UserName ?? string.Empty);
                 }
             });
         }
@@ -227,7 +211,7 @@ namespace MoM.Api.Services
                     var action = meeting.ActionItems[index];
                     table.Cell().Element(BodyCell).AlignCenter().Text((index + 1).ToString());
                     table.Cell().Element(BodyCell).Text(action.Task);
-                    table.Cell().Element(BodyCell).AlignCenter().Text(action.Responsibility);
+                    table.Cell().Element(BodyCell).AlignCenter().Text(action.ResponsibilityUser?.UserName ?? string.Empty);
                     table.Cell().Element(BodyCell).AlignCenter().Text(action.Deadline?.ToString("dd-MM-yy") ?? string.Empty);
                 }
             });
@@ -235,6 +219,8 @@ namespace MoM.Api.Services
 
         private static void RenderAttendeeTable(IContainer container, Meeting meeting)
         {
+            var attendees = GetAttendees(meeting);
+
             container.Table(table =>
             {
                 table.ColumnsDefinition(columns =>
@@ -251,7 +237,7 @@ namespace MoM.Api.Services
                     header.Cell().Element(HeaderCell).AlignCenter().Text("Status");
                 });
 
-                if (meeting.MeetingUsers.Count == 0)
+                if (attendees.Count == 0)
                 {
                     table.Cell().Element(BodyCell).AlignCenter().Text("1");
                     table.Cell().Element(BodyCell).Text("No attendee data");
@@ -259,16 +245,16 @@ namespace MoM.Api.Services
                     return;
                 }
 
-                for (var index = 0; index < meeting.MeetingUsers.Count; index++)
+                for (var index = 0; index < attendees.Count; index++)
                 {
-                    var attendee = meeting.MeetingUsers[index];
+                    var attendee = attendees[index];
                     table.Cell().Element(BodyCell).AlignCenter().Text((index + 1).ToString());
-                    table.Cell().Element(BodyCell).Text(attendee.UserName);
+                    table.Cell().Element(BodyCell).Text(attendee.User.UserName);
                     table.Cell().Element(BodyCell).Padding(3).AlignCenter().Element(statusContainer =>
                     {
-                        var background = attendee.IsPresent ? "#D9F8EA" : "#FFE1EA";
-                        var border = attendee.IsPresent ? "#0F9B6F" : "#E0527A";
-                        var text = attendee.IsPresent ? "#0B6B4E" : "#9E1F4B";
+                        var background = attendee.IsPresent ? "#D7FFF0" : "#FFE0ED";
+                        var border = attendee.IsPresent ? "#0CA678" : "#D6336C";
+                        var text = attendee.IsPresent ? "#087F5B" : "#A61E4D";
 
                         return statusContainer
                             .Background(background)
@@ -280,6 +266,22 @@ namespace MoM.Api.Services
                     }).Text(attendee.IsPresent ? "Present" : "Absent");
                 }
             });
+        }
+
+        private static List<MeetingUserMap> GetAttendees(Meeting meeting)
+        {
+            return meeting.UserMappings
+                .Where(u => u.Role == MeetingRoles.Attendee)
+                .OrderBy(u => u.User.UserName)
+                .ToList();
+        }
+
+        private static string? GetRoleUser(Meeting meeting, string role)
+        {
+            return meeting.UserMappings
+                .Where(u => u.Role == role)
+                .Select(u => u.User.UserName)
+                .FirstOrDefault();
         }
 
         private static IContainer HeaderCell(IContainer container)

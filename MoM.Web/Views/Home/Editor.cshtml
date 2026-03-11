@@ -50,19 +50,43 @@
         </div>
         <div class="form-group">
             <label class="form-label">Venue</label>
-            <input type="text" id="meetingVenue" class="form-input" placeholder="Android Lab" />
+            <div class="lookup-combobox" data-lookup-type="venue">
+                <input type="text" id="meetingVenue" class="form-input lookup-input" placeholder="Select or enter venue" autocomplete="off" />
+                <button type="button" class="lookup-toggle" aria-label="Show venue options">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="lookup-menu"></div>
+            </div>
         </div>
         <div class="form-group">
             <label class="form-label">Facilitator</label>
-            <input type="text" id="meetingFacilitator" class="form-input" placeholder="Dr. Gopi Sanghani" />
+            <div class="lookup-combobox" data-lookup-type="user">
+                <input type="text" id="meetingFacilitator" class="form-input lookup-input" placeholder="Select or enter facilitator" autocomplete="off" />
+                <button type="button" class="lookup-toggle" aria-label="Show facilitator options">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="lookup-menu"></div>
+            </div>
         </div>
         <div class="form-group">
             <label class="form-label">Chairperson</label>
-            <input type="text" id="meetingChairperson" class="form-input" placeholder="Chairperson name" />
+            <div class="lookup-combobox" data-lookup-type="user">
+                <input type="text" id="meetingChairperson" class="form-input lookup-input" placeholder="Select or enter chairperson" autocomplete="off" />
+                <button type="button" class="lookup-toggle" aria-label="Show chairperson options">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="lookup-menu"></div>
+            </div>
         </div>
         <div class="form-group">
             <label class="form-label">Secretary</label>
-            <input type="text" id="meetingSecretary" class="form-input" placeholder="Secretary name" />
+            <div class="lookup-combobox" data-lookup-type="user">
+                <input type="text" id="meetingSecretary" class="form-input lookup-input" placeholder="Select or enter secretary" autocomplete="off" />
+                <button type="button" class="lookup-toggle" aria-label="Show secretary options">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="lookup-menu"></div>
+            </div>
         </div>
     </div>
 
@@ -71,9 +95,9 @@
     <div class="form-group">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <label class="form-label" style="font-size: 1.2rem; color: var(--primary);">Attendees</label>
-            <button type="button" class="btn-add" onclick="addMeetingUser()">+ Add Attendee</button>
+            <button type="button" class="btn-add" onclick="addAttendee()">+ Add Attendee</button>
         </div>
-        <div id="meetingUsersContainer"></div>
+        <div id="attendeesContainer"></div>
     </div>
 
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
@@ -111,11 +135,11 @@
         const API_URL = '/mom-api';
         const meetingId = @(ViewBag.MeetingId ?? "null");
         let logoBase64 = null;
+        let userLookup = [];
+        let venueLookup = [];
 
         function previewLogo(input) {
-            if (!input.files || !input.files[0]) {
-                return;
-            }
+            if (!input.files || !input.files[0]) return;
 
             const reader = new FileReader();
             reader.onload = function (e) {
@@ -127,17 +151,150 @@
             reader.readAsDataURL(input.files[0]);
         }
 
+        function escapeHtml(value) {
+            return (value || '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('"', '&quot;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+        }
+
         function removeRow(button) {
             button.parentElement.remove();
         }
 
-        function addMeetingUser(data = { id: 0, userName: '', isPresent: true }) {
-            const container = document.getElementById('meetingUsersContainer');
+        function getLookupItems(type) {
+            return type === 'venue' ? venueLookup : userLookup;
+        }
+
+        function findLookupByName(items, value) {
+            const normalized = (value || '').trim().toLowerCase();
+            return items.find(item => item.name.trim().toLowerCase() === normalized) || null;
+        }
+
+        function getLookupInput(elementOrSelector) {
+            if (typeof elementOrSelector === 'string') {
+                return document.getElementById(elementOrSelector);
+            }
+
+            return elementOrSelector;
+        }
+
+        function buildLookupSelection(value, items, fallbackId) {
+            const trimmed = (value || '').trim();
+            if (!trimmed) return null;
+
+            const matched = findLookupByName(items, trimmed);
+            if (matched) {
+                return { id: matched.id, name: matched.name };
+            }
+
+            if (fallbackId) {
+                return { id: fallbackId, name: trimmed };
+            }
+
+            return { id: null, name: trimmed };
+        }
+
+        function buildLookupSelectionFromInput(input, items) {
+            return buildLookupSelection(input.value, items, Number(input.dataset.lookupId || 0));
+        }
+
+        function createLookupField(type, inputClass, placeholder, value = '', lookupId = '') {
+            return `
+                <div class="lookup-combobox" data-lookup-type="${type}">
+                    <input
+                        type="text"
+                        class="form-input lookup-input ${inputClass}"
+                        placeholder="${placeholder}"
+                        value="${escapeHtml(value)}"
+                        data-lookup-id="${lookupId || ''}"
+                        autocomplete="off" />
+                    <button type="button" class="lookup-toggle" aria-label="Show options">
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="lookup-menu"></div>
+                </div>
+            `;
+        }
+
+        function closeLookupMenus(except = null) {
+            document.querySelectorAll('.lookup-combobox').forEach(wrapper => {
+                if (wrapper !== except) {
+                    wrapper.classList.remove('lookup-open');
+                }
+            });
+        }
+
+        function renderLookupMenu(wrapper, query = '') {
+            const type = wrapper.dataset.lookupType;
+            const items = getLookupItems(type);
+            const menu = wrapper.querySelector('.lookup-menu');
+            const input = wrapper.querySelector('.lookup-input');
+            const normalizedQuery = query.trim().toLowerCase();
+            const filtered = items
+                .filter(item => !normalizedQuery || item.name.toLowerCase().includes(normalizedQuery))
+                .slice(0, 8);
+
+            const exactMatch = findLookupByName(items, query);
+            const options = filtered.map(item => `
+                <button type="button" class="lookup-option" data-id="${item.id}" data-name="${escapeHtml(item.name)}">
+                    <span class="lookup-option-title">${escapeHtml(item.name)}</span>
+                    <span class="lookup-option-tag">Existing</span>
+                </button>
+            `);
+
+            if (query.trim() && !exactMatch) {
+                options.unshift(`
+                    <button type="button" class="lookup-option lookup-option-create" data-id="" data-name="${escapeHtml(query.trim())}">
+                        <span class="lookup-option-title">Use "${escapeHtml(query.trim())}"</span>
+                        <span class="lookup-option-tag">New</span>
+                    </button>
+                `);
+            }
+
+            if (!options.length) {
+                menu.innerHTML = '<div class="lookup-empty">Start typing to add a new option.</div>';
+            } else {
+                menu.innerHTML = options.join('');
+            }
+
+            if (document.activeElement === input || wrapper.classList.contains('lookup-open')) {
+                closeLookupMenus(wrapper);
+                wrapper.classList.add('lookup-open');
+                const menuRect = menu.getBoundingClientRect();
+                const wrapperRect = wrapper.getBoundingClientRect();
+                const availableBelow = window.innerHeight - wrapperRect.bottom;
+                const availableAbove = wrapperRect.top;
+                const shouldOpenUpward = availableBelow < Math.min(menuRect.height || 280, 280) && availableAbove > availableBelow;
+                wrapper.classList.toggle('lookup-open-up', shouldOpenUpward);
+            }
+        }
+
+        function setLookupSelection(input, selection) {
+            const target = getLookupInput(input);
+            target.value = selection?.name || '';
+            target.dataset.lookupId = selection?.id || '';
+        }
+
+        async function loadLookups() {
+            const [usersResponse, venuesResponse] = await Promise.all([
+                fetch(`${API_URL}/lookups/users`),
+                fetch(`${API_URL}/lookups/venues`)
+            ]);
+
+            userLookup = usersResponse.ok ? await usersResponse.json() : [];
+            venueLookup = venuesResponse.ok ? await venuesResponse.json() : [];
+        }
+
+        function addAttendee(data = { mappingId: 0, userId: null, userName: '', isPresent: true }) {
+            const container = document.getElementById('attendeesContainer');
             const row = document.createElement('div');
             row.className = 'dynamic-list-row attendee-row';
-            row.dataset.id = data.id || 0;
+            row.dataset.mappingId = data.mappingId || 0;
+            row.dataset.userId = data.userId || '';
             row.innerHTML = `
-                <input type="text" class="form-input attendee-name-input" placeholder="Attendee name" value="${escapeHtml(data.userName || '')}" style="flex: 2;" />
+                ${createLookupField('user', 'attendee-name-input', 'Select or enter attendee', data.userName, data.userId)}
                 <label class="attendee-toggle">
                     <input type="checkbox" class="attendee-present-input" ${data.isPresent ? 'checked' : ''} />
                     <span>Present</span>
@@ -147,20 +304,20 @@
             container.appendChild(row);
         }
 
-        function addAgendaItem(data = { id: 0, topic: '', owner: '' }) {
+        function addAgendaItem(data = { id: 0, topic: '', owner: null }) {
             const container = document.getElementById('agendaItemsContainer');
             const row = document.createElement('div');
             row.className = 'dynamic-list-row agenda-row';
             row.dataset.id = data.id || 0;
             row.innerHTML = `
                 <input type="text" class="form-input topic-input" placeholder="Topic" value="${escapeHtml(data.topic || '')}" style="flex: 2;" />
-                <input type="text" class="form-input owner-input" placeholder="Owner" value="${escapeHtml(data.owner || '')}" style="flex: 1;" />
+                ${createLookupField('user', 'owner-input', 'Select or enter owner', data.owner?.name || '', data.owner?.id || '')}
                 <button type="button" class="btn-icon" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
             `;
             container.appendChild(row);
         }
 
-        function addActionItem(data = { id: 0, task: '', responsibility: '', deadline: '' }) {
+        function addActionItem(data = { id: 0, task: '', responsibility: null, deadline: '' }) {
             const container = document.getElementById('actionItemsContainer');
             const row = document.createElement('div');
             row.className = 'dynamic-list-row action-row';
@@ -168,88 +325,89 @@
             const deadline = data.deadline ? new Date(data.deadline).toISOString().split('T')[0] : '';
             row.innerHTML = `
                 <input type="text" class="form-input task-input" placeholder="Action" value="${escapeHtml(data.task || '')}" style="flex: 2;" />
-                <input type="text" class="form-input resp-input" placeholder="Owner" value="${escapeHtml(data.responsibility || '')}" style="flex: 1;" />
+                ${createLookupField('user', 'resp-input', 'Select or enter owner', data.responsibility?.name || '', data.responsibility?.id || '')}
                 <input type="date" class="form-input deadline-input" value="${deadline}" style="width: 160px;" />
                 <button type="button" class="btn-icon" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
             `;
             container.appendChild(row);
         }
 
-        function escapeHtml(value) {
-            return value
-                .replaceAll('&', '&amp;')
-                .replaceAll('"', '&quot;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;');
+        function setLookupInputValue(id, selection) {
+            setLookupSelection(id, selection);
         }
 
         async function loadMeeting() {
             if (!meetingId) {
-                addMeetingUser();
+                addAttendee();
                 addAgendaItem();
                 addActionItem();
                 return;
             }
 
-            try {
-                const response = await fetch(`${API_URL}/meetings/${meetingId}`);
-                if (!response.ok) {
-                    throw new Error(`Request failed: ${response.status}`);
-                }
+            const response = await fetch(`${API_URL}/meetings/${meetingId}`);
+            if (!response.ok) throw new Error(`Request failed: ${response.status}`);
 
-                const data = await response.json();
-                document.getElementById('meetingTitle').value = data.title || 'Minutes of Meeting';
-                document.getElementById('meetingNumber').value = data.meetingNumber || '';
-                document.getElementById('meetingType').value = data.meetingType || '';
-                document.getElementById('meetingSubject').value = data.subject || '';
-                document.getElementById('meetingDescription').value = data.description || '';
-                document.getElementById('meetingDate').value = data.date.split('T')[0];
-                document.getElementById('meetingTime').value = data.time || '';
-                document.getElementById('meetingVenue').value = data.venue || '';
-                document.getElementById('meetingFacilitator').value = data.facilitator || '';
-                document.getElementById('meetingChairperson').value = data.chairperson || '';
-                document.getElementById('meetingSecretary').value = data.secretary || '';
+            const data = await response.json();
+            document.getElementById('meetingTitle').value = data.title || 'Minutes of Meeting';
+            document.getElementById('meetingNumber').value = data.meetingNumber || '';
+            document.getElementById('meetingType').value = data.meetingType || '';
+            document.getElementById('meetingSubject').value = data.subject || '';
+            document.getElementById('meetingDescription').value = data.description || '';
+            document.getElementById('meetingDate').value = data.date.split('T')[0];
+            document.getElementById('meetingTime').value = data.time || '';
 
-                if (data.logo) {
-                    document.getElementById('logoPreview').src = `data:image/png;base64,${data.logo}`;
-                    document.getElementById('logoPreview').style.display = 'block';
-                    document.getElementById('logoText').style.display = 'none';
-                    logoBase64 = data.logo;
-                }
+            setLookupInputValue('meetingVenue', data.venue);
+            setLookupInputValue('meetingFacilitator', data.facilitator);
+            setLookupInputValue('meetingChairperson', data.chairperson);
+            setLookupInputValue('meetingSecretary', data.secretary);
 
-                (data.meetingUsers.length ? data.meetingUsers : [{ id: 0, userName: '', isPresent: true }]).forEach(addMeetingUser);
-                (data.agendas.length ? data.agendas : [{ id: 0, topic: '', owner: '' }]).forEach(addAgendaItem);
-                (data.actionItems.length ? data.actionItems : [{ id: 0, task: '', responsibility: '', deadline: '' }]).forEach(addActionItem);
-            } catch (error) {
-                console.error('Error loading meeting:', error);
-                alert('Failed to load meeting.');
+            if (data.logo) {
+                document.getElementById('logoPreview').src = `data:image/png;base64,${data.logo}`;
+                document.getElementById('logoPreview').style.display = 'block';
+                document.getElementById('logoText').style.display = 'none';
+                logoBase64 = data.logo;
             }
+
+            (data.attendees.length ? data.attendees : [{ mappingId: 0, userId: null, userName: '', isPresent: true }]).forEach(addAttendee);
+            (data.agendas.length ? data.agendas : [{ id: 0, topic: '', owner: null }]).forEach(addAgendaItem);
+            (data.actionItems.length ? data.actionItems : [{ id: 0, task: '', responsibility: null, deadline: '' }]).forEach(addActionItem);
         }
 
         function buildPayload() {
-            const meetingUsers = Array.from(document.querySelectorAll('.attendee-row'))
-                .map(row => ({
-                    id: Number(row.dataset.id || 0),
-                    userName: row.querySelector('.attendee-name-input').value.trim(),
-                    isPresent: row.querySelector('.attendee-present-input').checked
-                }))
+            const attendees = Array.from(document.querySelectorAll('.attendee-row'))
+                .map(row => {
+                    const input = row.querySelector('.attendee-name-input');
+                    const selection = buildLookupSelectionFromInput(input, userLookup);
+                    return {
+                        mappingId: Number(row.dataset.mappingId || 0),
+                        userId: selection?.id || null,
+                        userName: selection?.name || null,
+                        isPresent: row.querySelector('.attendee-present-input').checked
+                    };
+                })
                 .filter(item => item.userName);
 
             const agendas = Array.from(document.querySelectorAll('.agenda-row'))
-                .map(row => ({
-                    id: Number(row.dataset.id || 0),
-                    topic: row.querySelector('.topic-input').value.trim(),
-                    owner: row.querySelector('.owner-input').value.trim()
-                }))
+                .map(row => {
+                    const ownerInput = row.querySelector('.owner-input');
+                    return {
+                        id: Number(row.dataset.id || 0),
+                        topic: row.querySelector('.topic-input').value.trim(),
+                        owner: buildLookupSelectionFromInput(ownerInput, userLookup)
+                    };
+                })
                 .filter(item => item.topic);
 
             const actionItems = Array.from(document.querySelectorAll('.action-row'))
-                .map(row => ({
-                    id: Number(row.dataset.id || 0),
-                    task: row.querySelector('.task-input').value.trim(),
-                    responsibility: row.querySelector('.resp-input').value.trim(),
-                    deadline: row.querySelector('.deadline-input').value || null
-                }))
+                .map(row => {
+                    const responsibilityInput = row.querySelector('.resp-input');
+                    return {
+                        id: Number(row.dataset.id || 0),
+                        task: row.querySelector('.task-input').value.trim(),
+                        responsibility: buildLookupSelectionFromInput(responsibilityInput, userLookup),
+                        deadline: row.querySelector('.deadline-input').value || null
+                    };
+                })
                 .filter(item => item.task);
 
             return {
@@ -260,12 +418,12 @@
                 description: document.getElementById('meetingDescription').value.trim() || null,
                 date: document.getElementById('meetingDate').value,
                 time: document.getElementById('meetingTime').value || null,
-                venue: document.getElementById('meetingVenue').value.trim() || null,
-                facilitator: document.getElementById('meetingFacilitator').value.trim() || null,
-                chairperson: document.getElementById('meetingChairperson').value.trim() || null,
-                secretary: document.getElementById('meetingSecretary').value.trim() || null,
+                venue: buildLookupSelection(document.getElementById('meetingVenue').value, venueLookup, Number(document.getElementById('meetingVenue').dataset.lookupId || 0)),
+                facilitator: buildLookupSelection(document.getElementById('meetingFacilitator').value, userLookup, Number(document.getElementById('meetingFacilitator').dataset.lookupId || 0)),
+                chairperson: buildLookupSelection(document.getElementById('meetingChairperson').value, userLookup, Number(document.getElementById('meetingChairperson').dataset.lookupId || 0)),
+                secretary: buildLookupSelection(document.getElementById('meetingSecretary').value, userLookup, Number(document.getElementById('meetingSecretary').dataset.lookupId || 0)),
                 logo: logoBase64,
-                meetingUsers,
+                attendees,
                 agendas,
                 actionItems
             };
@@ -273,7 +431,6 @@
 
         async function saveMeeting() {
             const payload = buildPayload();
-
             if (!payload.subject) {
                 alert('Meeting subject is required.');
                 return;
@@ -287,27 +444,81 @@
             const method = meetingId ? 'PUT' : 'POST';
             const url = meetingId ? `${API_URL}/meetings/${meetingId}` : `${API_URL}/meetings`;
 
+            const response = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Save failed:', errorText);
+                alert(`Error saving MoM.\n\n${errorText}`);
+                return;
+            }
+
+            location.href = '@Url.Action("Dashboard", "Home")';
+        }
+
+        async function initializePage() {
             try {
-                const response = await fetch(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Save failed:', errorText);
-                    alert(`Error saving MoM.\n\n${errorText}`);
-                    return;
-                }
-
-                location.href = '@Url.Action("Dashboard", "Home")';
+                await loadLookups();
+                await loadMeeting();
             } catch (error) {
-                console.error('Save error:', error);
-                alert('Error saving MoM.');
+                console.error('Editor initialization failed:', error);
+                alert('Failed to load editor data.');
             }
         }
 
-        loadMeeting();
+        document.addEventListener('focusin', event => {
+            if (!event.target.classList.contains('lookup-input')) {
+                return;
+            }
+
+            const wrapper = event.target.closest('.lookup-combobox');
+            renderLookupMenu(wrapper, event.target.value);
+        });
+
+        document.addEventListener('input', event => {
+            if (!event.target.classList.contains('lookup-input')) {
+                return;
+            }
+
+            event.target.dataset.lookupId = '';
+            const wrapper = event.target.closest('.lookup-combobox');
+            renderLookupMenu(wrapper, event.target.value);
+        });
+
+        document.addEventListener('click', event => {
+            const option = event.target.closest('.lookup-option');
+            if (option) {
+                const wrapper = option.closest('.lookup-combobox');
+                const input = wrapper.querySelector('.lookup-input');
+                input.value = option.dataset.name || '';
+                input.dataset.lookupId = option.dataset.id || '';
+                wrapper.classList.remove('lookup-open');
+                wrapper.classList.remove('lookup-open-up');
+                return;
+            }
+
+            const toggle = event.target.closest('.lookup-toggle');
+            if (toggle) {
+                const wrapper = toggle.closest('.lookup-combobox');
+                const input = wrapper.querySelector('.lookup-input');
+                if (wrapper.classList.contains('lookup-open')) {
+                    wrapper.classList.remove('lookup-open');
+                    wrapper.classList.remove('lookup-open-up');
+                } else {
+                    renderLookupMenu(wrapper, input.value);
+                }
+                return;
+            }
+
+            if (!event.target.closest('.lookup-combobox')) {
+                closeLookupMenus();
+            }
+        });
+
+        initializePage();
     </script>
 }

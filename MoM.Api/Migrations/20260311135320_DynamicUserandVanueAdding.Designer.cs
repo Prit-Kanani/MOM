@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MoM.Api.Models;
 
@@ -11,9 +12,11 @@ using MoM.Api.Models;
 namespace MoM.Api.Migrations
 {
     [DbContext(typeof(MomContext))]
-    partial class MomContextModelSnapshot : ModelSnapshot
+    [Migration("20260311135320_DynamicUserandVanueAdding")]
+    partial class DynamicUserandVanueAdding
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -36,8 +39,10 @@ namespace MoM.Api.Migrations
                     b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ResponsibilityUserId")
-                        .HasColumnType("int");
+                    b.Property<string>("Responsibility")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Task")
                         .IsRequired()
@@ -47,8 +52,6 @@ namespace MoM.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MeetingId");
-
-                    b.HasIndex("ResponsibilityUserId");
 
                     b.ToTable("ActionItems");
                 });
@@ -64,8 +67,10 @@ namespace MoM.Api.Migrations
                     b.Property<int>("MeetingId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("OwnerUserId")
-                        .HasColumnType("int");
+                    b.Property<string>("Owner")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Topic")
                         .IsRequired()
@@ -75,8 +80,6 @@ namespace MoM.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MeetingId");
-
-                    b.HasIndex("OwnerUserId");
 
                     b.ToTable("AgendaItems");
                 });
@@ -231,13 +234,6 @@ namespace MoM.Api.Migrations
                         .HasForeignKey("MeetingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("MoM.Api.Models.AppUser", "ResponsibilityUser")
-                        .WithMany()
-                        .HasForeignKey("ResponsibilityUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("ResponsibilityUser");
                 });
 
             modelBuilder.Entity("MoM.Api.Models.AgendaItem", b =>
@@ -247,13 +243,6 @@ namespace MoM.Api.Migrations
                         .HasForeignKey("MeetingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("MoM.Api.Models.AppUser", "OwnerUser")
-                        .WithMany()
-                        .HasForeignKey("OwnerUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("OwnerUser");
                 });
 
             modelBuilder.Entity("MoM.Api.Models.MeetingUserMap", b =>
