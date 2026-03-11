@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.rsuser
+*.suo
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+
+# Rider
+.idea/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local tool/cache folders
+.dotnet/
+
+# Generated publish artifacts
+publish/
+
+# Entity Framework generated database files if local
+*.mdf
+*.ldf

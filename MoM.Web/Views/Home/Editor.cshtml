@@ -1,0 +1,313 @@
+@{
+    ViewData["Title"] = "MoM Editor";
+}
+
+<div class="canvas-editor glass-card">
+    <a href="@Url.Action("Dashboard", "Home")" class="editor-back-link">
+        <i class="fas fa-arrow-left"></i>
+        <span>Back to Dashboard</span>
+    </a>
+
+    <div class="canvas-header">
+        <div style="flex: 1;">
+            <input type="text" id="meetingTitle" class="editable-title" value="Minutes of Meeting" placeholder="Document Title" />
+            <div class="form-group" style="margin-top: 16px; max-width: 320px;">
+                <label class="form-label">Meeting No.</label>
+                <input type="text" id="meetingNumber" class="form-input" placeholder="AY-2526-01" />
+            </div>
+        </div>
+        <div id="logoContainer" onclick="document.getElementById('logoUpload').click()" style="width: 100px; height: 100px; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; overflow: hidden;">
+            <span id="logoText" style="font-size: 0.8rem; color: #999;">Upload Logo</span>
+            <img id="logoPreview" style="display: none; width: 100%; height: 100%; object-fit: contain;" alt="Meeting logo preview" />
+            <input type="file" id="logoUpload" hidden accept="image/*" onchange="previewLogo(this)" />
+        </div>
+    </div>
+
+    <div class="editor-grid">
+        <div class="form-group">
+            <label class="form-label">Meeting Type</label>
+            <input type="text" id="meetingType" class="form-input" placeholder="Academic Review / Department Meeting" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Meeting Subject</label>
+            <input type="text" id="meetingSubject" class="form-input" placeholder="CC / PC Meeting" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea id="meetingDescription" class="form-input" rows="2" placeholder="Brief description of the meeting..."></textarea>
+    </div>
+
+    <div class="editor-grid">
+        <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" id="meetingDate" class="form-input" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Time</label>
+            <input type="time" id="meetingTime" class="form-input" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Venue</label>
+            <input type="text" id="meetingVenue" class="form-input" placeholder="Android Lab" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Facilitator</label>
+            <input type="text" id="meetingFacilitator" class="form-input" placeholder="Dr. Gopi Sanghani" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Chairperson</label>
+            <input type="text" id="meetingChairperson" class="form-input" placeholder="Chairperson name" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Secretary</label>
+            <input type="text" id="meetingSecretary" class="form-input" placeholder="Secretary name" />
+        </div>
+    </div>
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+
+    <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label class="form-label" style="font-size: 1.2rem; color: var(--primary);">Attendees</label>
+            <button type="button" class="btn-add" onclick="addMeetingUser()">+ Add Attendee</button>
+        </div>
+        <div id="meetingUsersContainer"></div>
+    </div>
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+
+    <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label class="form-label" style="font-size: 1.2rem; color: var(--primary);">Meeting Agenda</label>
+            <button type="button" class="btn-add" onclick="addAgendaItem()">+ Add Agenda</button>
+        </div>
+        <div id="agendaItemsContainer"></div>
+    </div>
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
+
+    <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label class="form-label" style="font-size: 1.2rem; color: var(--primary);">Actionable Items</label>
+            <button type="button" class="btn-add" onclick="addActionItem()">+ Add Action</button>
+        </div>
+        <div id="actionItemsContainer"></div>
+    </div>
+
+    <div class="editor-actions" style="margin-top: 50px; display: flex; gap: 20px; justify-content: flex-end;">
+        <button type="button" class="btn-link" onclick="location.href='@Url.Action("Dashboard", "Home")'">Cancel</button>
+        @if (ViewBag.MeetingId != null)
+        {
+            <a href="/mom-api/export/@ViewBag.MeetingId" target="_blank" class="btn-link" style="padding-top: 10px;">Export PDF</a>
+        }
+        <button type="button" class="btn-primary" onclick="saveMeeting()">Save Meeting</button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const API_URL = '/mom-api';
+        const meetingId = @(ViewBag.MeetingId ?? "null");
+        let logoBase64 = null;
+
+        function previewLogo(input) {
+            if (!input.files || !input.files[0]) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('logoPreview').src = e.target.result;
+                document.getElementById('logoPreview').style.display = 'block';
+                document.getElementById('logoText').style.display = 'none';
+                logoBase64 = e.target.result.split(',')[1];
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function removeRow(button) {
+            button.parentElement.remove();
+        }
+
+        function addMeetingUser(data = { id: 0, userName: '', isPresent: true }) {
+            const container = document.getElementById('meetingUsersContainer');
+            const row = document.createElement('div');
+            row.className = 'dynamic-list-row attendee-row';
+            row.dataset.id = data.id || 0;
+            row.innerHTML = `
+                <input type="text" class="form-input attendee-name-input" placeholder="Attendee name" value="${escapeHtml(data.userName || '')}" style="flex: 2;" />
+                <label class="attendee-toggle">
+                    <input type="checkbox" class="attendee-present-input" ${data.isPresent ? 'checked' : ''} />
+                    <span>Present</span>
+                </label>
+                <button type="button" class="btn-icon" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(row);
+        }
+
+        function addAgendaItem(data = { id: 0, topic: '', owner: '' }) {
+            const container = document.getElementById('agendaItemsContainer');
+            const row = document.createElement('div');
+            row.className = 'dynamic-list-row agenda-row';
+            row.dataset.id = data.id || 0;
+            row.innerHTML = `
+                <input type="text" class="form-input topic-input" placeholder="Topic" value="${escapeHtml(data.topic || '')}" style="flex: 2;" />
+                <input type="text" class="form-input owner-input" placeholder="Owner" value="${escapeHtml(data.owner || '')}" style="flex: 1;" />
+                <button type="button" class="btn-icon" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(row);
+        }
+
+        function addActionItem(data = { id: 0, task: '', responsibility: '', deadline: '' }) {
+            const container = document.getElementById('actionItemsContainer');
+            const row = document.createElement('div');
+            row.className = 'dynamic-list-row action-row';
+            row.dataset.id = data.id || 0;
+            const deadline = data.deadline ? new Date(data.deadline).toISOString().split('T')[0] : '';
+            row.innerHTML = `
+                <input type="text" class="form-input task-input" placeholder="Action" value="${escapeHtml(data.task || '')}" style="flex: 2;" />
+                <input type="text" class="form-input resp-input" placeholder="Owner" value="${escapeHtml(data.responsibility || '')}" style="flex: 1;" />
+                <input type="date" class="form-input deadline-input" value="${deadline}" style="width: 160px;" />
+                <button type="button" class="btn-icon" onclick="removeRow(this)"><i class="fas fa-trash"></i></button>
+            `;
+            container.appendChild(row);
+        }
+
+        function escapeHtml(value) {
+            return value
+                .replaceAll('&', '&amp;')
+                .replaceAll('"', '&quot;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+        }
+
+        async function loadMeeting() {
+            if (!meetingId) {
+                addMeetingUser();
+                addAgendaItem();
+                addActionItem();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/meetings/${meetingId}`);
+                if (!response.ok) {
+                    throw new Error(`Request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById('meetingTitle').value = data.title || 'Minutes of Meeting';
+                document.getElementById('meetingNumber').value = data.meetingNumber || '';
+                document.getElementById('meetingType').value = data.meetingType || '';
+                document.getElementById('meetingSubject').value = data.subject || '';
+                document.getElementById('meetingDescription').value = data.description || '';
+                document.getElementById('meetingDate').value = data.date.split('T')[0];
+                document.getElementById('meetingTime').value = data.time || '';
+                document.getElementById('meetingVenue').value = data.venue || '';
+                document.getElementById('meetingFacilitator').value = data.facilitator || '';
+                document.getElementById('meetingChairperson').value = data.chairperson || '';
+                document.getElementById('meetingSecretary').value = data.secretary || '';
+
+                if (data.logo) {
+                    document.getElementById('logoPreview').src = `data:image/png;base64,${data.logo}`;
+                    document.getElementById('logoPreview').style.display = 'block';
+                    document.getElementById('logoText').style.display = 'none';
+                    logoBase64 = data.logo;
+                }
+
+                (data.meetingUsers.length ? data.meetingUsers : [{ id: 0, userName: '', isPresent: true }]).forEach(addMeetingUser);
+                (data.agendas.length ? data.agendas : [{ id: 0, topic: '', owner: '' }]).forEach(addAgendaItem);
+                (data.actionItems.length ? data.actionItems : [{ id: 0, task: '', responsibility: '', deadline: '' }]).forEach(addActionItem);
+            } catch (error) {
+                console.error('Error loading meeting:', error);
+                alert('Failed to load meeting.');
+            }
+        }
+
+        function buildPayload() {
+            const meetingUsers = Array.from(document.querySelectorAll('.attendee-row'))
+                .map(row => ({
+                    id: Number(row.dataset.id || 0),
+                    userName: row.querySelector('.attendee-name-input').value.trim(),
+                    isPresent: row.querySelector('.attendee-present-input').checked
+                }))
+                .filter(item => item.userName);
+
+            const agendas = Array.from(document.querySelectorAll('.agenda-row'))
+                .map(row => ({
+                    id: Number(row.dataset.id || 0),
+                    topic: row.querySelector('.topic-input').value.trim(),
+                    owner: row.querySelector('.owner-input').value.trim()
+                }))
+                .filter(item => item.topic);
+
+            const actionItems = Array.from(document.querySelectorAll('.action-row'))
+                .map(row => ({
+                    id: Number(row.dataset.id || 0),
+                    task: row.querySelector('.task-input').value.trim(),
+                    responsibility: row.querySelector('.resp-input').value.trim(),
+                    deadline: row.querySelector('.deadline-input').value || null
+                }))
+                .filter(item => item.task);
+
+            return {
+                title: document.getElementById('meetingTitle').value.trim() || 'Minutes of Meeting',
+                meetingNumber: document.getElementById('meetingNumber').value.trim() || null,
+                meetingType: document.getElementById('meetingType').value.trim() || null,
+                subject: document.getElementById('meetingSubject').value.trim(),
+                description: document.getElementById('meetingDescription').value.trim() || null,
+                date: document.getElementById('meetingDate').value,
+                time: document.getElementById('meetingTime').value || null,
+                venue: document.getElementById('meetingVenue').value.trim() || null,
+                facilitator: document.getElementById('meetingFacilitator').value.trim() || null,
+                chairperson: document.getElementById('meetingChairperson').value.trim() || null,
+                secretary: document.getElementById('meetingSecretary').value.trim() || null,
+                logo: logoBase64,
+                meetingUsers,
+                agendas,
+                actionItems
+            };
+        }
+
+        async function saveMeeting() {
+            const payload = buildPayload();
+
+            if (!payload.subject) {
+                alert('Meeting subject is required.');
+                return;
+            }
+
+            if (!payload.date) {
+                alert('Meeting date is required.');
+                return;
+            }
+
+            const method = meetingId ? 'PUT' : 'POST';
+            const url = meetingId ? `${API_URL}/meetings/${meetingId}` : `${API_URL}/meetings`;
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Save failed:', errorText);
+                    alert(`Error saving MoM.\n\n${errorText}`);
+                    return;
+                }
+
+                location.href = '@Url.Action("Dashboard", "Home")';
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('Error saving MoM.');
+            }
+        }
+
+        loadMeeting();
+    </script>
+}
