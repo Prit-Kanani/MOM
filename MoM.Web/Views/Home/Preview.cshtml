@@ -4,9 +4,9 @@
 
 <div class="glass-card preview-shell">
     <div class="preview-actions">
-        <a href="@Url.Action("Dashboard", "Home")" class="editor-back-link">
+        <a href="@Url.Action("MeetingVault", "Home")" class="editor-back-link">
             <i class="fas fa-arrow-left"></i>
-            <span>Back to Dashboard</span>
+            <span>Back to Vault</span>
         </a>
         <div style="display: flex; gap: 12px; flex-wrap: wrap;">
             <a href="/Home/Editor?id=@ViewBag.MeetingId" class="btn-link">Edit MOM</a>
@@ -51,6 +51,11 @@
                 const content = document.getElementById('previewContent');
                 content.innerHTML = `
                     <div class="preview-header">
+                        ${data.logo ? `
+                            <div class="preview-logo-wrap">
+                                <img src="data:image/png;base64,${data.logo}" alt="Meeting logo" class="preview-logo" />
+                            </div>
+                        ` : ''}
                         <div>
                             <div class="hero-kicker">${escapeHtml(data.meetingType || 'Meeting')}</div>
                             <h1>${escapeHtml(data.title)}</h1>
