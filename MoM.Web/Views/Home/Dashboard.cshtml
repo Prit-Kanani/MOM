@@ -32,7 +32,14 @@
 
     <div class="chart-grid">
         <div class="chart-card">
-            <div class="chart-title">Meetings Taken</div>
+            <div class="chart-head">
+                <div class="chart-title">Meetings Taken</div>
+                <div class="chart-filter" role="tablist" aria-label="Meeting volume period">
+                    <button type="button" class="chart-filter-btn is-active" data-period="month" onclick="changeMeetingVolumePeriod('month')">Month</button>
+                    <button type="button" class="chart-filter-btn" data-period="week" onclick="changeMeetingVolumePeriod('week')">Week</button>
+                    <button type="button" class="chart-filter-btn" data-period="year" onclick="changeMeetingVolumePeriod('year')">Year</button>
+                </div>
+            </div>
             <div id="meetingVolumeChart" class="bar-chart-empty">No meeting data yet.</div>
         </div>
         <div class="chart-card">
@@ -76,6 +83,7 @@
     <script>
         const API_URL = '/mom-api';
         const INSIGHT_PAGE_SIZE = 5;
+        let meetingVolumePeriod = 'month';
         let userAttendanceItems = [];
         let venueMeetingItems = [];
         let userAttendancePage = 1;
@@ -83,7 +91,7 @@
 
         async function loadStats() {
             try {
-                const response = await fetch(`${API_URL}/meetings/stats`);
+                const response = await fetch(`${API_URL}/meetings/stats?period=${encodeURIComponent(meetingVolumePeriod)}`);
                 if (!response.ok) {
                     throw new Error(`Request failed: ${response.status}`);
                 }
@@ -106,6 +114,32 @@
             } catch (error) {
                 console.error('Stats load failed:', error);
             }
+        }
+
+        async function loadMeetingVolume() {
+            try {
+                const response = await fetch(`${API_URL}/meetings/stats?period=${encodeURIComponent(meetingVolumePeriod)}`);
+                if (!response.ok) {
+                    throw new Error(`Request failed: ${response.status}`);
+                }
+
+                const stats = await response.json();
+                renderMeetingVolume(stats.meetingVolume || []);
+            } catch (error) {
+                console.error('Meeting volume load failed:', error);
+            }
+        }
+
+        function changeMeetingVolumePeriod(period) {
+            if (meetingVolumePeriod === period) {
+                return;
+            }
+
+            meetingVolumePeriod = period;
+            document.querySelectorAll('.chart-filter-btn').forEach(button => {
+                button.classList.toggle('is-active', button.dataset.period === period);
+            });
+            loadMeetingVolume();
         }
 
         function animateCounter(id, target) {
@@ -137,12 +171,12 @@
             const maxValue = Math.max(...items.map(item => item.count), 1);
             container.className = 'bar-chart';
             container.innerHTML = items.map((item, index) => `
-                <div class="bar-item">
-                    <div class="bar-label">${item.label}</div>
-                    <div class="bar-track">
-                        <div class="bar-fill" style="--target-width:${(item.count / maxValue) * 100}%; animation-delay:${index * 120}ms;"></div>
+                <div class="bar-column" style="animation-delay:${index * 120}ms;">
+                    <div class="bar-column-value">${item.count}</div>
+                    <div class="bar-column-track">
+                        <div class="bar-column-fill" style="--target-height:${Math.max((item.count / maxValue) * 100, 8)}%;"></div>
                     </div>
-                    <div class="bar-value">${item.count}</div>
+                    <div class="bar-column-label">${item.label}</div>
                 </div>
             `).join('');
         }
@@ -229,7 +263,7 @@
                 <div class="insight-row" style="animation-delay:${index * 90}ms;">
                     <div class="insight-copy">
                         <strong>${item.userName}</strong>
-                        <span>${item.presentCount} present • ${item.absentCount} absent</span>
+                        <span>${item.presentCount} present / ${item.absentCount} absent</span>
                     </div>
                     <div class="insight-meter">
                         <div class="insight-meter-fill" style="--target-width:${(item.totalCount / maxTotal) * 100}%"></div>

@@ -21,9 +21,15 @@ namespace MoM.Web.Controllers
         }
 
         [HttpGet("meetings/stats")]
-        public Task<IActionResult> GetMeetingStats()
+        public Task<IActionResult> GetMeetingStats([FromQuery] string? period = null)
         {
-            return ForwardAsync("api/meetings/stats", HttpMethod.Get);
+            var path = "api/meetings/stats";
+            if (!string.IsNullOrWhiteSpace(period))
+            {
+                path += $"?period={Uri.EscapeDataString(period)}";
+            }
+
+            return ForwardAsync(path, HttpMethod.Get);
         }
 
         [HttpGet("lookups/users")]

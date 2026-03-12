@@ -419,37 +419,90 @@ main.container {
     color: var(--primary);
 }
 
-.bar-chart {
-    display: grid;
-    gap: 12px;
-}
-
-.bar-item {
-    display: grid;
-    grid-template-columns: 80px 1fr 36px;
-    gap: 12px;
+.chart-head {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
-.bar-label,
-.bar-value {
-    font-size: 0.86rem;
-    color: #46506a;
+.chart-head .chart-title {
+    margin-bottom: 0;
 }
 
-.bar-track {
-    height: 12px;
+.chart-filter {
+    display: inline-flex;
+    padding: 4px;
     border-radius: 999px;
     background: rgba(67, 97, 238, 0.08);
+    border: 1px solid rgba(67, 97, 238, 0.12);
+}
+
+.chart-filter-btn {
+    border: none;
+    background: transparent;
+    color: #5b6883;
+    font: inherit;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chart-filter-btn.is-active {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    box-shadow: 0 10px 24px rgba(67, 97, 238, 0.22);
+}
+
+.bar-chart {
+    min-height: 260px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+
+.bar-column {
+    min-height: 240px;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    justify-items: center;
+}
+
+.bar-column-value,
+.bar-column-label {
+    font-size: 0.86rem;
+    color: #46506a;
+    text-align: center;
+}
+
+.bar-column-value {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.bar-column-track {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: end;
+    padding: 8px 10px 0;
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(67, 97, 238, 0.05), rgba(67, 97, 238, 0.12));
     overflow: hidden;
 }
 
-.bar-fill {
-    height: 100%;
-    border-radius: inherit;
+.bar-column-fill {
+    width: 100%;
     background: linear-gradient(135deg, var(--primary), var(--accent));
-    width: 0;
-    animation: growBar 900ms ease forwards;
+    height: 0;
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 10px 24px rgba(67, 97, 238, 0.2);
+    animation: growBarHeight 900ms ease forwards;
 }
 
 .bar-chart-empty {
@@ -521,6 +574,16 @@ main.container {
 
     to {
         width: var(--target-width);
+    }
+}
+
+@keyframes growBarHeight {
+    from {
+        height: 0;
+    }
+
+    to {
+        height: var(--target-height);
     }
 }
 
@@ -1018,6 +1081,21 @@ tr:hover {
     .stats-grid,
     .chart-grid {
         grid-template-columns: 1fr;
+    }
+
+    .chart-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chart-filter {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .chart-filter-btn {
+        flex: 1 1 0;
+        text-align: center;
     }
 
     .insight-row {
