@@ -709,6 +709,7 @@ tr:hover {
     box-shadow: 0 0 50px rgba(0,0,0,0.1);
     min-height: 800px;
     overflow: hidden;
+    width: min(100%, 100%);
 }
 
 .canvas-header {
@@ -718,6 +719,7 @@ tr:hover {
     border-bottom: 2px solid #eee;
     padding-bottom: 20px;
     margin-bottom: 30px;
+    gap: 24px;
 }
 
 .editable-title {
@@ -737,6 +739,7 @@ tr:hover {
     width: 220px;
     display: grid;
     gap: 12px;
+    flex: 0 0 auto;
 }
 
 .logo-dropzone {
@@ -749,6 +752,7 @@ tr:hover {
     justify-content: center;
     cursor: pointer;
     overflow: hidden;
+    max-width: 100%;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 243, 251, 0.9));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
@@ -770,6 +774,7 @@ tr:hover {
     display: flex;
     justify-content: center;
     gap: 16px;
+    flex-wrap: wrap;
 }
 
 .logo-discard {
@@ -852,6 +857,7 @@ tr:hover {
 
 .form-group {
     margin-bottom: 20px;
+    min-width: 0;
 }
 
 .editor-grid {
@@ -889,8 +895,14 @@ tr:hover {
     color: #4a5568;
 }
 
+.required-mark {
+    color: #d6336c;
+    font-weight: 700;
+}
+
 .form-input {
     width: 100%;
+    max-width: 100%;
     padding: 12px;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
@@ -1032,6 +1044,25 @@ tr:hover {
     margin-bottom: 10px;
     align-items: center;
     flex-wrap: wrap;
+    width: 100%;
+}
+
+.dynamic-list-row > * {
+    min-width: 0;
+}
+
+.editor-section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+
+.dynamic-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .btn-icon {
@@ -1115,15 +1146,31 @@ tr:hover {
     border-radius: 20px;
     padding: 28px;
     border: 1px solid rgba(67, 97, 238, 0.1);
+    overflow: hidden;
+}
+
+.preview-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    min-width: 0;
+}
+
+.preview-header > div:last-child {
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .preview-header h1 {
     margin: 0 0 8px;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
 }
 
 .preview-header p {
     margin: 0;
     color: #53617d;
+    overflow-wrap: anywhere;
 }
 
 .preview-logo-wrap {
@@ -1137,6 +1184,8 @@ tr:hover {
     display: grid;
     place-items: center;
     box-shadow: 0 14px 34px rgba(22, 33, 61, 0.08);
+    flex: 0 0 auto;
+    max-width: 100%;
 }
 
 .preview-logo {
@@ -1192,6 +1241,8 @@ tr:hover {
     padding: 12px 16px;
     border-radius: 999px;
     border: 1px solid transparent;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .attendee-present {
@@ -1213,12 +1264,14 @@ tr:hover {
     margin-bottom: 12px;
     border-radius: 16px;
     background: rgba(67, 97, 238, 0.05);
+    min-width: 0;
 }
 
 .preview-row-card span,
 .preview-row-card small,
 .preview-empty {
     color: #5d6984;
+    overflow-wrap: anywhere;
 }
 
 @media (max-width: 768px) {
@@ -1334,6 +1387,16 @@ tr:hover {
         grid-template-columns: 1fr;
     }
 
+    .preview-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .preview-logo-wrap {
+        width: min(180px, 100%);
+        height: 180px;
+    }
+
     .table-shell {
         overflow-x: visible;
     }
@@ -1422,6 +1485,10 @@ tr:hover {
         width: 100%;
     }
 
+    .logo-dropzone {
+        min-height: 240px;
+    }
+
     .logo-preview-dialog {
         width: min(92vw, 560px);
         padding: 18px;
@@ -1435,6 +1502,7 @@ tr:hover {
     .canvas-editor {
         padding: 24px 20px;
         min-height: auto;
+        border-radius: 20px;
     }
 
     .editable-title {
@@ -1444,17 +1512,82 @@ tr:hover {
     .dynamic-list-row {
         flex-direction: column;
         align-items: stretch;
+        gap: 12px;
     }
 
     .dynamic-list-row .form-input,
     .dynamic-list-row .lookup-combobox,
-    .dynamic-list-row .btn-icon {
+    .dynamic-row-meta {
         width: 100% !important;
     }
 
+    .dynamic-list-row .lookup-combobox {
+        position: relative;
+        display: block;
+        overflow: visible;
+        flex: none;
+    }
+
+    .dynamic-list-row .lookup-combobox .lookup-input {
+        display: block;
+        width: 100%;
+    }
+
+    .dynamic-list-row .lookup-combobox .lookup-toggle {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        margin: 0;
+    }
+
+    .dynamic-list-row .lookup-combobox.lookup-open .lookup-toggle {
+        transform: translateY(-50%) rotate(180deg);
+    }
+
+    .dynamic-list-row .btn-icon {
+        width: 44px !important;
+        height: 44px;
+        align-self: flex-end;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(229, 62, 62, 0.12);
+    }
+
+    .dynamic-list-row .lookup-combobox .lookup-menu {
+        position: absolute;
+        top: calc(100% + 10px);
+        bottom: auto;
+        left: 0;
+        right: 0;
+        z-index: 80;
+    }
+
     .attendee-toggle {
+        flex: 1 1 auto;
+        width: auto;
+        justify-content: flex-start;
+    }
+
+    .editor-section-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .editor-section-head .btn-add {
         width: 100%;
         justify-content: center;
+    }
+
+    .dynamic-row-meta {
+        justify-content: space-between;
+    }
+
+    .dynamic-row-meta .row-remove-btn {
+        flex: 0 0 auto;
+        align-self: center;
     }
 
     .editor-actions {
@@ -1472,6 +1605,16 @@ tr:hover {
     .preview-actions {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .preview-card {
+        padding: 22px 18px;
+    }
+
+    .attendee-pill {
+        min-width: 0;
+        width: 100%;
+        border-radius: 20px;
     }
 
     .action-icon {
@@ -1496,5 +1639,99 @@ tr:hover {
     .editor-back-link {
         width: 100%;
         justify-content: center;
+    }
+
+    .canvas-editor {
+        padding: 20px 14px;
+        border-radius: 18px;
+    }
+
+    .canvas-header {
+        gap: 16px;
+        margin-bottom: 22px;
+        padding-bottom: 18px;
+    }
+
+    .editable-title {
+        font-size: 1.65rem;
+    }
+
+    .logo-shell {
+        gap: 10px;
+    }
+
+    .logo-dropzone {
+        min-height: 200px;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        border-radius: 20px;
+    }
+
+    .logo-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .logo-actions .btn-link {
+        width: 100%;
+        text-align: center;
+    }
+
+    .logo-preview-dialog {
+        width: min(94vw, 560px);
+        max-height: 82vh;
+        padding: 14px;
+        border-radius: 22px;
+    }
+
+    .logo-preview-dialog img {
+        max-height: 74vh;
+    }
+
+    .btn-add,
+    .btn-link,
+    .btn-primary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .dynamic-row-meta {
+        flex-wrap: wrap;
+    }
+
+    .editor-toast {
+        right: 12px;
+        bottom: 12px;
+        max-width: calc(100vw - 24px);
+        border-radius: 16px;
+    }
+
+    .preview-card {
+        padding: 18px 14px;
+        border-radius: 18px;
+    }
+
+    .preview-logo-wrap {
+        width: min(150px, 100%);
+        height: 150px;
+        padding: 10px;
+        border-radius: 20px;
+    }
+
+    .preview-field,
+    .preview-row-card {
+        padding: 14px;
+    }
+
+    .attendee-preview-list {
+        gap: 10px;
+    }
+
+    .attendee-pill {
+        padding: 12px 14px;
+        gap: 10px;
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

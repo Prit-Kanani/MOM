@@ -231,9 +231,44 @@ namespace MoM.Api.Controllers
 
         private bool ValidateMeeting(MeetingUpsertDto meeting)
         {
+            if (string.IsNullOrWhiteSpace(meeting.MeetingType))
+            {
+                ModelState.AddModelError(nameof(meeting.MeetingType), "Meeting type is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(meeting.Subject))
+            {
+                ModelState.AddModelError(nameof(meeting.Subject), "Meeting subject is required.");
+            }
+
             if (meeting.Date is null)
             {
                 ModelState.AddModelError(nameof(meeting.Date), "Date is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(meeting.Time))
+            {
+                ModelState.AddModelError(nameof(meeting.Time), "Time is required.");
+            }
+
+            if (meeting.Venue is null || (!meeting.Venue.Id.HasValue && string.IsNullOrWhiteSpace(meeting.Venue.Name)))
+            {
+                ModelState.AddModelError(nameof(meeting.Venue), "Venue is required.");
+            }
+
+            if (meeting.Facilitator is null || (!meeting.Facilitator.Id.HasValue && string.IsNullOrWhiteSpace(meeting.Facilitator.Name)))
+            {
+                ModelState.AddModelError(nameof(meeting.Facilitator), "Facilitator is required.");
+            }
+
+            if (!meeting.Attendees.Any(a => a.UserId.HasValue || !string.IsNullOrWhiteSpace(a.UserName)))
+            {
+                ModelState.AddModelError(nameof(meeting.Attendees), "At least one attendee is required.");
+            }
+
+            if (!meeting.Agendas.Any(a => !string.IsNullOrWhiteSpace(a.Topic) && (a.Owner?.Id.HasValue == true || !string.IsNullOrWhiteSpace(a.Owner?.Name))))
+            {
+                ModelState.AddModelError(nameof(meeting.Agendas), "At least one agenda item with owner is required.");
             }
 
             if ((meeting.Facilitator?.Id ?? 0) < 0 ||

@@ -47,8 +47,6 @@
             <div class="ratio-chart-wrap">
                 <div class="ratio-chart-shell">
                     <div id="attendanceRatioChart" class="ratio-chart"><span>No attendance data</span></div>
-                    <div id="presentRatioBadge" class="ratio-badge ratio-badge-present" hidden>Present 0%</div>
-                    <div id="absentRatioBadge" class="ratio-badge ratio-badge-absent" hidden>Absent 0%</div>
                 </div>
                 <div class="ratio-legend">
                     <div id="presentLegend"><span class="legend-dot legend-present"></span>Present</div>
@@ -188,16 +186,12 @@
         function animateAttendanceRatio(present, absent) {
             const total = present + absent;
             const chart = document.getElementById('attendanceRatioChart');
-            const presentBadge = document.getElementById('presentRatioBadge');
-            const absentBadge = document.getElementById('absentRatioBadge');
             const presentLegend = document.getElementById('presentLegend');
             const absentLegend = document.getElementById('absentLegend');
 
             if (!total) {
                 chart.style.background = 'rgba(67, 97, 238, 0.08)';
                 chart.innerHTML = '<span>No attendance data</span>';
-                presentBadge.hidden = true;
-                absentBadge.hidden = true;
                 presentLegend.innerHTML = '<span class="legend-dot legend-present"></span>Present';
                 absentLegend.innerHTML = '<span class="legend-dot legend-absent"></span>Absent';
                 return;
@@ -207,8 +201,6 @@
             const targetAbsentPercent = 100 - targetPresentPercent;
             let currentPercent = 0;
             chart.innerHTML = '<span>0% Present</span>';
-            presentBadge.hidden = false;
-            absentBadge.hidden = false;
 
             function step() {
                 currentPercent += Math.max(1, Math.ceil((targetPresentPercent - currentPercent) / 10));
@@ -218,16 +210,12 @@
 
                 chart.style.background = `conic-gradient(#0f9b6f 0 ${currentPercent}%, #e0527a ${currentPercent}% 100%)`;
                 chart.innerHTML = `<span>${currentPercent}% Present</span>`;
-                presentBadge.textContent = `Present ${currentPercent}%`;
-                absentBadge.textContent = `Absent ${100 - currentPercent}%`;
                 presentLegend.innerHTML = `<span class="legend-dot legend-present"></span>Present ${currentPercent}%`;
                 absentLegend.innerHTML = `<span class="legend-dot legend-absent"></span>Absent ${100 - currentPercent}%`;
 
                 if (currentPercent < targetPresentPercent) {
                     requestAnimationFrame(step);
                 } else {
-                    presentBadge.textContent = `Present ${targetPresentPercent}%`;
-                    absentBadge.textContent = `Absent ${targetAbsentPercent}%`;
                     presentLegend.innerHTML = `<span class="legend-dot legend-present"></span>Present ${targetPresentPercent}%`;
                     absentLegend.innerHTML = `<span class="legend-dot legend-absent"></span>Absent ${targetAbsentPercent}%`;
                 }
