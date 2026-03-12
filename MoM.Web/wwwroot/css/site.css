@@ -647,6 +647,47 @@ tr:hover {
     background-color: rgba(67, 97, 238, 0.02);
 }
 
+.text-center {
+    text-align: center;
+}
+
+.sort-header {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+}
+
+.sort-header-center {
+    justify-content: center;
+}
+
+.sort-indicator {
+    min-width: 12px;
+    color: #60708d;
+}
+
+.vault-table th:last-child,
+.vault-table td:last-child {
+    text-align: center;
+}
+
+.actions-cell-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 /* Canvas Editor */
 .canvas-editor {
     background: white;

@@ -22,17 +22,17 @@
     </div>
 
     <div class="table-shell">
-        <table id="meetingsTable">
+        <table id="meetingsTable" class="vault-table">
             <thead>
                 <tr>
-                    <th>Meeting No.</th>
-                    <th>Meeting Type</th>
-                    <th>Date</th>
-                    <th>Venue</th>
-                    <th>Subject</th>
-                    <th>Present</th>
-                    <th>Absent</th>
-                    <th>Actions</th>
+                    <th><button type="button" class="sort-header" onclick="sortMeetings('meetingNumber')">Meeting No.<span id="sort-meetingNumber" class="sort-indicator"></span></button></th>
+                    <th><button type="button" class="sort-header" onclick="sortMeetings('meetingType')">Meeting Type<span id="sort-meetingType" class="sort-indicator"></span></button></th>
+                    <th class="text-center"><button type="button" class="sort-header sort-header-center" onclick="sortMeetings('date')">Date<span id="sort-date" class="sort-indicator"></span></button></th>
+                    <th><button type="button" class="sort-header" onclick="sortMeetings('venueName')">Venue<span id="sort-venueName" class="sort-indicator"></span></button></th>
+                    <th><button type="button" class="sort-header" onclick="sortMeetings('subject')">Subject<span id="sort-subject" class="sort-indicator"></span></button></th>
+                    <th class="text-center"><button type="button" class="sort-header sort-header-center" onclick="sortMeetings('presentCount')">Present<span id="sort-presentCount" class="sort-indicator"></span></button></th>
+                    <th class="text-center"><button type="button" class="sort-header sort-header-center" onclick="sortMeetings('absentCount')">Absent<span id="sort-absentCount" class="sort-indicator"></span></button></th>
+                    <th class="text-center">Actions</th>
                 </tr>
             </thead>
             <tbody id="meetingsList">
@@ -42,11 +42,138 @@
             </tbody>
         </table>
     </div>
+
+    <div id="meetingVaultPagination" class="insight-pagination" hidden></div>
 </div>
 
 @section Scripts {
     <script>
         const API_URL = '/mom-api';
+        const VAULT_PAGE_SIZE = 8;
+        let meetingsData = [];
+        let vaultPage = 1;
+        let sortState = { key: 'date', direction: 'desc' };
+
+        function formatVaultDate(value) {
+            const date = new Date(value);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function compareValues(a, b, key) {
+            const aValue = a?.[key];
+            const bValue = b?.[key];
+
+            if (key === 'date') {
+                return new Date(aValue) - new Date(bValue);
+            }
+
+            if (key === 'presentCount' || key === 'absentCount') {
+                return (aValue || 0) - (bValue || 0);
+            }
+
+            return String(aValue || '').localeCompare(String(bValue || ''), undefined, { numeric: true, sensitivity: 'base' });
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('.sort-indicator').forEach(indicator => {
+                indicator.textContent = '';
+            });
+
+            const activeIndicator = document.getElementById(`sort-${sortState.key}`);
+            if (activeIndicator) {
+                activeIndicator.textContent = sortState.direction === 'asc' ? '↑' : '↓';
+            }
+        }
+
+        function renderPagination() {
+            const container = document.getElementById('meetingVaultPagination');
+            const totalPages = Math.ceil(meetingsData.length / VAULT_PAGE_SIZE);
+
+            if (totalPages <= 1) {
+                container.hidden = true;
+                container.innerHTML = '';
+                return;
+            }
+
+            container.hidden = false;
+            container.innerHTML = `
+                <button type="button" class="pagination-btn" ${vaultPage === 1 ? 'disabled' : ''} onclick="changeVaultPage(${vaultPage - 1})">
+                    <i class="fas fa-chevron-left"></i>
+                    <span>Prev</span>
+                </button>
+                <div class="pagination-indicator">Page ${vaultPage} of ${totalPages}</div>
+                <button type="button" class="pagination-btn" ${vaultPage === totalPages ? 'disabled' : ''} onclick="changeVaultPage(${vaultPage + 1})">
+                    <span>Next</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+        }
+
+        function renderMeetings() {
+            const list = document.getElementById('meetingsList');
+
+            if (meetingsData.length === 0) {
+                list.innerHTML = '<tr class="table-status-row"><td colspan="8" style="text-align: center;">No MOM records found. Create your first MOM to get started.</td></tr>';
+                renderPagination();
+                return;
+            }
+
+            const start = (vaultPage - 1) * VAULT_PAGE_SIZE;
+            const pagedMeetings = meetingsData.slice(start, start + VAULT_PAGE_SIZE);
+
+            list.innerHTML = pagedMeetings.map(m => `
+                <tr>
+                    <td data-label="Meeting No.">${m.meetingNumber || 'N/A'}</td>
+                    <td data-label="Meeting Type">${m.meetingType || 'N/A'}</td>
+                    <td data-label="Date" class="text-center">${formatVaultDate(m.date)}</td>
+                    <td data-label="Venue">${m.venueName || 'N/A'}</td>
+                    <td data-label="Subject"><strong>${m.subject}</strong></td>
+                    <td data-label="Present" class="text-center">${m.presentCount}</td>
+                    <td data-label="Absent" class="text-center">${m.absentCount}</td>
+                    <td data-label="Actions" class="actions-cell actions-cell-center">
+                        <a href="/Home/Preview/${m.id}" class="action-icon action-view" title="Preview MOM" aria-label="Preview MOM">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="/Home/Editor?id=${m.id}" class="action-icon action-edit" title="Edit MOM" aria-label="Edit MOM">
+                            <i class="fas fa-pen-to-square"></i>
+                        </a>
+                        <a href="${API_URL}/export/${m.id}" target="_blank" class="action-icon action-export" title="Export PDF" aria-label="Export PDF">
+                            <i class="fas fa-file-arrow-down"></i>
+                        </a>
+                        <button type="button" onclick="deleteMeeting(${m.id})" class="action-icon action-delete" title="Delete MOM" aria-label="Delete MOM">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            renderPagination();
+        }
+
+        function sortMeetings(key) {
+            if (sortState.key === key) {
+                sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState = { key, direction: key === 'date' ? 'desc' : 'asc' };
+            }
+
+            meetingsData.sort((a, b) => {
+                const result = compareValues(a, b, key);
+                return sortState.direction === 'asc' ? result : -result;
+            });
+
+            vaultPage = 1;
+            updateSortIndicators();
+            renderMeetings();
+        }
+
+        function changeVaultPage(page) {
+            vaultPage = page;
+            renderMeetings();
+        }
 
         async function loadMeetings() {
             try {
@@ -55,39 +182,8 @@
                     throw new Error(`Request failed: ${response.status}`);
                 }
 
-                const meetings = await response.json();
-                const list = document.getElementById('meetingsList');
-
-                if (meetings.length === 0) {
-                    list.innerHTML = '<tr class="table-status-row"><td colspan="8" style="text-align: center;">No MOM records found. Create your first MOM to get started.</td></tr>';
-                    return;
-                }
-
-                list.innerHTML = meetings.map(m => `
-                    <tr>
-                        <td data-label="Meeting No.">${m.meetingNumber || 'N/A'}</td>
-                        <td data-label="Meeting Type">${m.meetingType || 'N/A'}</td>
-                        <td data-label="Date">${new Date(m.date).toLocaleDateString()}</td>
-                        <td data-label="Venue">${m.venueName || 'N/A'}</td>
-                        <td data-label="Subject"><strong>${m.subject}</strong></td>
-                        <td data-label="Present">${m.presentCount}</td>
-                        <td data-label="Absent">${m.absentCount}</td>
-                        <td data-label="Actions" class="actions-cell" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <a href="/Home/Preview/${m.id}" class="action-icon action-view" title="Preview MOM" aria-label="Preview MOM">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <a href="/Home/Editor?id=${m.id}" class="action-icon action-edit" title="Edit MOM" aria-label="Edit MOM">
-                                <i class="fas fa-pen-to-square"></i>
-                            </a>
-                            <a href="${API_URL}/export/${m.id}" target="_blank" class="action-icon action-export" title="Export PDF" aria-label="Export PDF">
-                                <i class="fas fa-file-arrow-down"></i>
-                            </a>
-                            <button type="button" onclick="deleteMeeting(${m.id})" class="action-icon action-delete" title="Delete MOM" aria-label="Delete MOM">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `).join('');
+                meetingsData = await response.json();
+                sortMeetings(sortState.key);
             } catch (error) {
                 console.error('Error loading meetings:', error);
                 document.getElementById('meetingsList').innerHTML = '<tr class="table-status-row"><td colspan="8" style="text-align: center; color: red;">Failed to load meetings. Make sure the API is running.</td></tr>';
@@ -105,7 +201,7 @@
                     throw new Error(`Delete failed: ${response.status}`);
                 }
 
-                loadMeetings();
+                await loadMeetings();
             } catch (error) {
                 console.error('Delete error:', error);
                 alert('Error deleting MOM record.');
