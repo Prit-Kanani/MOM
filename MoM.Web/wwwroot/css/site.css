@@ -317,6 +317,39 @@ main.container {
     gap: 12px;
 }
 
+.insight-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid rgba(67, 97, 238, 0.14);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.08), rgba(76, 201, 240, 0.12));
+    color: var(--primary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.pagination-indicator {
+    color: #60708d;
+    font-size: 0.94rem;
+    font-weight: 600;
+}
+
 .insight-row {
     display: grid;
     grid-template-columns: minmax(180px, 1.2fr) minmax(0, 2fr) 52px;
@@ -993,6 +1026,18 @@ tr:hover {
 
     .insight-value {
         text-align: left;
+    }
+
+    .insight-pagination {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pagination-btn,
+    .pagination-indicator {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
     }
 
     .preview-grid {

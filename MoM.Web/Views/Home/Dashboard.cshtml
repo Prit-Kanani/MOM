@@ -57,6 +57,7 @@
             </div>
         </div>
         <div id="userAttendanceChart" class="insight-list empty-state">No user attendance data yet.</div>
+        <div id="userAttendancePagination" class="insight-pagination" hidden></div>
     </div>
 
     <div class="chart-card">
@@ -67,12 +68,18 @@
             </div>
         </div>
         <div id="venueMeetingsChart" class="insight-list empty-state">No venue activity yet.</div>
+        <div id="venueMeetingsPagination" class="insight-pagination" hidden></div>
     </div>
 </section>
 
 @section Scripts {
     <script>
         const API_URL = '/mom-api';
+        const INSIGHT_PAGE_SIZE = 5;
+        let userAttendanceItems = [];
+        let venueMeetingItems = [];
+        let userAttendancePage = 1;
+        let venueMeetingsPage = 1;
 
         async function loadStats() {
             try {
@@ -88,8 +95,14 @@
 
                 renderMeetingVolume(stats.meetingVolume || []);
                 animateAttendanceRatio(stats.totalPresentAttendees || 0, stats.totalAbsentAttendees || 0);
-                renderUserAttendance(stats.userAttendance || []);
-                renderVenueMeetings(stats.venueMeetings || []);
+
+                userAttendanceItems = stats.userAttendance || [];
+                venueMeetingItems = stats.venueMeetings || [];
+                userAttendancePage = 1;
+                venueMeetingsPage = 1;
+
+                renderUserAttendance();
+                renderVenueMeetings();
             } catch (error) {
                 console.error('Stats load failed:', error);
             }
@@ -165,17 +178,54 @@
             requestAnimationFrame(step);
         }
 
-        function renderUserAttendance(items) {
-            const container = document.getElementById('userAttendanceChart');
-            if (!items.length) {
-                container.className = 'insight-list empty-state';
-                container.textContent = 'No user attendance data yet.';
+        function renderPagination(containerId, currentPage, totalItems, handlerName) {
+            const container = document.getElementById(containerId);
+            const totalPages = Math.ceil(totalItems / INSIGHT_PAGE_SIZE);
+
+            if (totalPages <= 1) {
+                container.hidden = true;
+                container.innerHTML = '';
                 return;
             }
 
-            const maxTotal = Math.max(...items.map(item => item.totalCount || 0), 1);
+            container.hidden = false;
+            container.innerHTML = `
+                <button type="button" class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="${handlerName}(${currentPage - 1})">
+                    <i class="fas fa-chevron-left"></i>
+                    <span>Prev</span>
+                </button>
+                <div class="pagination-indicator">Page ${currentPage} of ${totalPages}</div>
+                <button type="button" class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="${handlerName}(${currentPage + 1})">
+                    <span>Next</span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            `;
+        }
+
+        function changeUserAttendancePage(page) {
+            userAttendancePage = page;
+            renderUserAttendance();
+        }
+
+        function changeVenueMeetingsPage(page) {
+            venueMeetingsPage = page;
+            renderVenueMeetings();
+        }
+
+        function renderUserAttendance() {
+            const container = document.getElementById('userAttendanceChart');
+            if (!userAttendanceItems.length) {
+                container.className = 'insight-list empty-state';
+                container.textContent = 'No user attendance data yet.';
+                renderPagination('userAttendancePagination', 1, 0, 'changeUserAttendancePage');
+                return;
+            }
+
+            const start = (userAttendancePage - 1) * INSIGHT_PAGE_SIZE;
+            const pagedItems = userAttendanceItems.slice(start, start + INSIGHT_PAGE_SIZE);
+            const maxTotal = Math.max(...userAttendanceItems.map(item => item.totalCount || 0), 1);
             container.className = 'insight-list';
-            container.innerHTML = items.slice(0, 8).map((item, index) => `
+            container.innerHTML = pagedItems.map((item, index) => `
                 <div class="insight-row" style="animation-delay:${index * 90}ms;">
                     <div class="insight-copy">
                         <strong>${item.userName}</strong>
@@ -187,19 +237,23 @@
                     <div class="insight-value">${item.totalCount}</div>
                 </div>
             `).join('');
+            renderPagination('userAttendancePagination', userAttendancePage, userAttendanceItems.length, 'changeUserAttendancePage');
         }
 
-        function renderVenueMeetings(items) {
+        function renderVenueMeetings() {
             const container = document.getElementById('venueMeetingsChart');
-            if (!items.length) {
+            if (!venueMeetingItems.length) {
                 container.className = 'insight-list empty-state';
                 container.textContent = 'No venue activity yet.';
+                renderPagination('venueMeetingsPagination', 1, 0, 'changeVenueMeetingsPage');
                 return;
             }
 
-            const maxCount = Math.max(...items.map(item => item.meetingCount), 1);
+            const start = (venueMeetingsPage - 1) * INSIGHT_PAGE_SIZE;
+            const pagedItems = venueMeetingItems.slice(start, start + INSIGHT_PAGE_SIZE);
+            const maxCount = Math.max(...venueMeetingItems.map(item => item.meetingCount), 1);
             container.className = 'insight-list';
-            container.innerHTML = items.slice(0, 8).map((item, index) => `
+            container.innerHTML = pagedItems.map((item, index) => `
                 <div class="insight-row" style="animation-delay:${index * 90}ms;">
                     <div class="insight-copy">
                         <strong>${item.venueName}</strong>
@@ -211,6 +265,7 @@
                     <div class="insight-value">${item.meetingCount}</div>
                 </div>
             `).join('');
+            renderPagination('venueMeetingsPagination', venueMeetingsPage, venueMeetingItems.length, 'changeVenueMeetingsPage');
         }
 
         loadStats();
