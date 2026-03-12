@@ -74,13 +74,21 @@ namespace MoM.Api.Controllers
                     .ThenBy(x => x.UserName)
                     .ToList(),
                 VenueMeetings = meetings
-                    .SelectMany(m => m.VenueMappings)
-                    .GroupBy(v => new { v.VenueId, v.Venue.VenueName })
+                    .SelectMany(m => m.VenueMappings.Select(v => new
+                    {
+                        v.VenueId,
+                        v.Venue.VenueName,
+                        PresentCount = m.UserMappings.Count(u => u.Role == MeetingRoles.Attendee && u.IsPresent),
+                        AbsentCount = m.UserMappings.Count(u => u.Role == MeetingRoles.Attendee && !u.IsPresent)
+                    }))
+                    .GroupBy(v => new { v.VenueId, v.VenueName })
                     .Select(g => new VenueMeetingPointDto
                     {
                         VenueId = g.Key.VenueId,
                         VenueName = g.Key.VenueName,
-                        MeetingCount = g.Count()
+                        MeetingCount = g.Count(),
+                        AveragePresentCount = Math.Round(g.Average(x => x.PresentCount), 1),
+                        AverageAbsentCount = Math.Round(g.Average(x => x.AbsentCount), 1)
                     })
                     .OrderByDescending(x => x.MeetingCount)
                     .ThenBy(x => x.VenueName)

@@ -190,5 +190,7 @@ namespace MoM.Api.Models
         public int VenueId { get; set; }
         public string VenueName { get; set; } = string.Empty;
         public int MeetingCount { get; set; }
+        public double AveragePresentCount { get; set; }
+        public double AverageAbsentCount { get; set; }
     }
 }

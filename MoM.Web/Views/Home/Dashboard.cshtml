@@ -45,10 +45,14 @@
         <div class="chart-card">
             <div class="chart-title">Present vs Absent Ratio</div>
             <div class="ratio-chart-wrap">
-                <div id="attendanceRatioChart" class="ratio-chart"><span>No attendance data</span></div>
+                <div class="ratio-chart-shell">
+                    <div id="attendanceRatioChart" class="ratio-chart"><span>No attendance data</span></div>
+                    <div id="presentRatioBadge" class="ratio-badge ratio-badge-present" hidden>Present 0%</div>
+                    <div id="absentRatioBadge" class="ratio-badge ratio-badge-absent" hidden>Absent 0%</div>
+                </div>
                 <div class="ratio-legend">
-                    <div><span class="legend-dot legend-present"></span>Present</div>
-                    <div><span class="legend-dot legend-absent"></span>Absent</div>
+                    <div id="presentLegend"><span class="legend-dot legend-present"></span>Present</div>
+                    <div id="absentLegend"><span class="legend-dot legend-absent"></span>Absent</div>
                 </div>
             </div>
         </div>
@@ -184,28 +188,48 @@
         function animateAttendanceRatio(present, absent) {
             const total = present + absent;
             const chart = document.getElementById('attendanceRatioChart');
+            const presentBadge = document.getElementById('presentRatioBadge');
+            const absentBadge = document.getElementById('absentRatioBadge');
+            const presentLegend = document.getElementById('presentLegend');
+            const absentLegend = document.getElementById('absentLegend');
 
             if (!total) {
                 chart.style.background = 'rgba(67, 97, 238, 0.08)';
                 chart.innerHTML = '<span>No attendance data</span>';
+                presentBadge.hidden = true;
+                absentBadge.hidden = true;
+                presentLegend.innerHTML = '<span class="legend-dot legend-present"></span>Present';
+                absentLegend.innerHTML = '<span class="legend-dot legend-absent"></span>Absent';
                 return;
             }
 
-            const targetPercent = Math.round((present / total) * 100);
+            const targetPresentPercent = Math.round((present / total) * 100);
+            const targetAbsentPercent = 100 - targetPresentPercent;
             let currentPercent = 0;
             chart.innerHTML = '<span>0% Present</span>';
+            presentBadge.hidden = false;
+            absentBadge.hidden = false;
 
             function step() {
-                currentPercent += Math.max(1, Math.ceil((targetPercent - currentPercent) / 10));
-                if (currentPercent > targetPercent) {
-                    currentPercent = targetPercent;
+                currentPercent += Math.max(1, Math.ceil((targetPresentPercent - currentPercent) / 10));
+                if (currentPercent > targetPresentPercent) {
+                    currentPercent = targetPresentPercent;
                 }
 
                 chart.style.background = `conic-gradient(#0f9b6f 0 ${currentPercent}%, #e0527a ${currentPercent}% 100%)`;
                 chart.innerHTML = `<span>${currentPercent}% Present</span>`;
+                presentBadge.textContent = `Present ${currentPercent}%`;
+                absentBadge.textContent = `Absent ${100 - currentPercent}%`;
+                presentLegend.innerHTML = `<span class="legend-dot legend-present"></span>Present ${currentPercent}%`;
+                absentLegend.innerHTML = `<span class="legend-dot legend-absent"></span>Absent ${100 - currentPercent}%`;
 
-                if (currentPercent < targetPercent) {
+                if (currentPercent < targetPresentPercent) {
                     requestAnimationFrame(step);
+                } else {
+                    presentBadge.textContent = `Present ${targetPresentPercent}%`;
+                    absentBadge.textContent = `Absent ${targetAbsentPercent}%`;
+                    presentLegend.innerHTML = `<span class="legend-dot legend-present"></span>Present ${targetPresentPercent}%`;
+                    absentLegend.innerHTML = `<span class="legend-dot legend-absent"></span>Absent ${targetAbsentPercent}%`;
                 }
             }
 
@@ -257,18 +281,16 @@
 
             const start = (userAttendancePage - 1) * INSIGHT_PAGE_SIZE;
             const pagedItems = userAttendanceItems.slice(start, start + INSIGHT_PAGE_SIZE);
-            const maxTotal = Math.max(...userAttendanceItems.map(item => item.totalCount || 0), 1);
             container.className = 'insight-list';
             container.innerHTML = pagedItems.map((item, index) => `
                 <div class="insight-row" style="animation-delay:${index * 90}ms;">
                     <div class="insight-copy">
                         <strong>${item.userName}</strong>
-                        <span>${item.presentCount} present / ${item.absentCount} absent</span>
                     </div>
                     <div class="insight-meter">
-                        <div class="insight-meter-fill" style="--target-width:${(item.totalCount / maxTotal) * 100}%"></div>
+                        <div class="insight-meter-fill" style="--target-width:${item.totalCount ? (item.presentCount / item.totalCount) * 100 : 0}%"></div>
                     </div>
-                    <div class="insight-value">${item.totalCount}</div>
+                    <div class="insight-value">${item.presentCount}/${item.totalCount}</div>
                 </div>
             `).join('');
             renderPagination('userAttendancePagination', userAttendancePage, userAttendanceItems.length, 'changeUserAttendancePage');
@@ -291,7 +313,7 @@
                 <div class="insight-row" style="animation-delay:${index * 90}ms;">
                     <div class="insight-copy">
                         <strong>${item.venueName}</strong>
-                        <span>Meeting activity by venue</span>
+                        <span>${item.meetingCount} meetings • Avg present ${item.averagePresentCount} • Avg absent ${item.averageAbsentCount}</span>
                     </div>
                     <div class="insight-meter venue-meter">
                         <div class="insight-meter-fill venue-fill" style="--target-width:${(item.meetingCount / maxCount) * 100}%"></div>

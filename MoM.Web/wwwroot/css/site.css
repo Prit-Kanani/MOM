@@ -515,6 +515,12 @@ main.container {
     justify-items: center;
 }
 
+.ratio-chart-shell {
+    position: relative;
+    display: grid;
+    place-items: center;
+}
+
 .ratio-chart {
     width: 210px;
     aspect-ratio: 1;
@@ -541,6 +547,30 @@ main.container {
     text-align: center;
     font-weight: 700;
     font-size: 0.92rem;
+}
+
+.ratio-badge {
+    position: absolute;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    box-shadow: 0 10px 24px rgba(22, 33, 61, 0.10);
+    backdrop-filter: blur(10px);
+}
+
+.ratio-badge-present {
+    top: 14%;
+    right: -22%;
+    background: linear-gradient(135deg, rgba(15, 155, 111, 0.18), rgba(38, 208, 124, 0.22));
+    color: #0b6b4e;
+}
+
+.ratio-badge-absent {
+    bottom: 14%;
+    left: -22%;
+    background: linear-gradient(135deg, rgba(224, 82, 122, 0.18), rgba(255, 116, 161, 0.22));
+    color: #9e1f4b;
 }
 
 .ratio-legend {
@@ -1096,6 +1126,15 @@ tr:hover {
     .chart-filter-btn {
         flex: 1 1 0;
         text-align: center;
+    }
+
+    .ratio-badge-present,
+    .ratio-badge-absent {
+        position: static;
+    }
+
+    .ratio-chart-shell {
+        gap: 12px;
     }
 
     .insight-row {
