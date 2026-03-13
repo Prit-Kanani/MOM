@@ -20,15 +20,29 @@ namespace MoM.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<MeetingSummaryDto>>> GetMeetings()
+        public async Task<ActionResult<IEnumerable<MeetingSummaryDto>>> GetMeetings([FromQuery] string? search = null)
         {
             var currentUserId = GetCurrentUserId();
-            var meetings = await _context.Meetings
+            var query = _context.Meetings
                 .AsNoTracking()
                 .Where(m => m.CreatedByAuthUserId == currentUserId)
                 .Include(m => m.VenueMappings)
                     .ThenInclude(v => v.Venue)
                 .Include(m => m.UserMappings)
+                .AsQueryable();
+
+            var normalizedSearch = search?.Trim();
+            if (!string.IsNullOrWhiteSpace(normalizedSearch))
+            {
+                var searchTerm = normalizedSearch.ToLower();
+                query = query.Where(m =>
+                    (m.MeetingNumber ?? string.Empty).ToLower().Contains(searchTerm) ||
+                    (m.MeetingType ?? string.Empty).ToLower().Contains(searchTerm) ||
+                    m.Subject.ToLower().Contains(searchTerm) ||
+                    m.VenueMappings.Any(v => v.Venue.VenueName.ToLower().Contains(searchTerm)));
+            }
+
+            var meetings = await query
                 .OrderByDescending(m => m.Date)
                 .ToListAsync();
 

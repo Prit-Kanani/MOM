@@ -707,6 +707,72 @@ main.container {
     -webkit-overflow-scrolling: touch;
 }
 
+.vault-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.vault-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.vault-search-btn {
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border: none;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(67, 97, 238, 0.12), rgba(76, 201, 240, 0.16));
+    color: var(--primary);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 10px 24px rgba(22, 33, 61, 0.08);
+}
+
+.vault-search-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(22, 33, 61, 0.12);
+}
+
+.vault-search-shell {
+    min-width: min(100%, 320px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border-radius: 14px;
+    background: rgba(67, 97, 238, 0.05);
+    border: 1px solid rgba(67, 97, 238, 0.12);
+}
+
+.vault-search-shell i {
+    color: var(--primary);
+}
+
+.vault-search-input {
+    margin: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding-left: 0;
+}
+
+.vault-search-input:focus {
+    border: none;
+    box-shadow: none;
+}
+
 /* Table Stylings */
 table {
     width: 100%;
@@ -1479,6 +1545,12 @@ tr:hover {
 
     .table-shell {
         overflow-x: visible;
+    }
+
+    .vault-head,
+    .vault-search {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     #meetingsTable,

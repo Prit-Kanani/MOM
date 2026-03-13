@@ -18,9 +18,15 @@ namespace MoM.Web.Controllers
         }
 
         [HttpGet("meetings")]
-        public Task<IActionResult> GetMeetings()
+        public Task<IActionResult> GetMeetings([FromQuery] string? search = null)
         {
-            return ForwardAsync("api/meetings", HttpMethod.Get);
+            var path = "api/meetings";
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                path += $"?search={Uri.EscapeDataString(search)}";
+            }
+
+            return ForwardAsync(path, HttpMethod.Get);
         }
 
         [HttpGet("meetings/stats")]

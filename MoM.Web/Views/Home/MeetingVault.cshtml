@@ -17,8 +17,15 @@
 </section>
 
 <div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="vault-head">
         <h2 style="margin: 0;">Saved MOM Records</h2>
+        <form class="vault-search" onsubmit="event.preventDefault(); applyVaultSearch();">
+            <div class="vault-search-shell">
+                <i class="fas fa-search"></i>
+                <input type="search" id="vaultSearchInput" class="form-input vault-search-input" placeholder="Search meeting no., type, subject, venue" />
+            </div>
+            <button type="submit" class="vault-search-btn">Search</button>
+        </form>
     </div>
 
     <div class="table-shell">
@@ -53,6 +60,7 @@
         let meetingsData = [];
         let vaultPage = 1;
         let sortState = { key: 'date', direction: 'desc' };
+        let vaultSearchTerm = '';
 
         function formatVaultDate(value) {
             const date = new Date(value);
@@ -177,7 +185,8 @@
 
         async function loadMeetings() {
             try {
-                const response = await fetch(`${API_URL}/meetings`);
+                const query = vaultSearchTerm ? `?search=${encodeURIComponent(vaultSearchTerm)}` : '';
+                const response = await fetch(`${API_URL}/meetings${query}`);
                 if (!response.ok) {
                     throw new Error(`Request failed: ${response.status}`);
                 }
@@ -188,6 +197,12 @@
                 console.error('Error loading meetings:', error);
                 document.getElementById('meetingsList').innerHTML = '<tr class="table-status-row"><td colspan="8" style="text-align: center; color: red;">Failed to load meetings. Make sure the API is running.</td></tr>';
             }
+        }
+
+        function applyVaultSearch() {
+            vaultSearchTerm = document.getElementById('vaultSearchInput').value.trim();
+            vaultPage = 1;
+            loadMeetings();
         }
 
         async function deleteMeeting(id) {
