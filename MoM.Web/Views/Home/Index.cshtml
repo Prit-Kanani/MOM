@@ -11,8 +11,16 @@
                 Create MOM records section-wise, track attendee presence by name, and manage every meeting from a focused dashboard built for clean workflows.
             </p>
             <div class="hero-actions">
-                <a asp-action="Dashboard" class="btn-primary" style="text-decoration: none;">Let's Get Started</a>
-                <a asp-action="MeetingVault" class="btn-link">Open Meeting Vault</a>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <a asp-action="Dashboard" class="btn-primary" style="text-decoration: none;">Let's Get Started</a>
+                    <a asp-action="MeetingVault" class="btn-link">Open Meeting Vault</a>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="btn-primary" style="text-decoration: none;">Let's Get Started</a>
+                    <a asp-controller="Account" asp-action="Register" class="btn-link">Create Account</a>
+                }
             </div>
         </div>
         <div class="hero-panel">

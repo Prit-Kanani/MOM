@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MoM.Api.Models;
@@ -6,6 +7,7 @@ namespace MoM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class LookupsController : ControllerBase
     {
         private readonly MomContext _context;

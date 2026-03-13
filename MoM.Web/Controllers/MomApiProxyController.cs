@@ -1,10 +1,13 @@
 using System.Text;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MoM.Web.Controllers
 {
     [ApiController]
     [Route("mom-api")]
+    [Authorize]
     public class MomApiProxyController : ControllerBase
     {
         private readonly IHttpClientFactory _httpClientFactory;
@@ -72,7 +75,9 @@ namespace MoM.Web.Controllers
         public async Task<IActionResult> ExportMeeting(int id)
         {
             var client = _httpClientFactory.CreateClient("MomApi");
-            using var response = await client.GetAsync($"api/export/{id}", HttpCompletionOption.ResponseHeadersRead);
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"api/export/{id}");
+            AttachAuthHeader(request);
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -92,6 +97,7 @@ namespace MoM.Web.Controllers
         {
             var client = _httpClientFactory.CreateClient("MomApi");
             using var request = new HttpRequestMessage(method, path);
+            AttachAuthHeader(request);
 
             if (payload is not null)
             {
@@ -116,6 +122,15 @@ namespace MoM.Web.Controllers
                 Content = content,
                 ContentType = mediaType
             };
+        }
+
+        private void AttachAuthHeader(HttpRequestMessage request)
+        {
+            var token = User.FindFirstValue("access_token");
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
         }
 
         private static class MediaTypeNames

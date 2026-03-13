@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MoM.Api.Models;
 using MoM.Api.Services;
+using System.Security.Claims;
 
 namespace MoM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class ExportController(MomContext context, PdfService pdfService) : ControllerBase
     {
         private readonly MomContext _context = context;
@@ -15,7 +18,9 @@ namespace MoM.Api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> ExportToPdf(int id)
         {
+            var currentUserId = GetCurrentUserId();
             var meeting = await _context.Meetings
+                .Where(m => m.CreatedByAuthUserId == currentUserId)
                 .Include(m => m.VenueMappings)
                     .ThenInclude(mv => mv.Venue)
                 .Include(m => m.UserMappings)
@@ -40,6 +45,17 @@ namespace MoM.Api.Controllers
                     detail: ex.Message,
                     statusCode: StatusCodes.Status500InternalServerError);
             }
+        }
+
+        private int GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(claim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Authenticated user id is missing.");
+            }
+
+            return userId;
         }
     }
 }

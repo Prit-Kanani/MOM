@@ -6,6 +6,9 @@ namespace MoM.Api.Models
     {
         public int Id { get; set; }
 
+        public int? CreatedByAuthUserId { get; set; }
+        public AuthUser? CreatedByAuthUser { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string Title { get; set; } = "Minutes of Meeting";

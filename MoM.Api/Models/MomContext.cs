@@ -7,6 +7,7 @@ namespace MoM.Api.Models
         public MomContext(DbContextOptions<MomContext> options) : base(options) { }
 
         public DbSet<Meeting> Meetings { get; set; }
+        public DbSet<AuthUser> AuthUsers { get; set; }
         public DbSet<AppUser> Users { get; set; }
         public DbSet<Venue> Venues { get; set; }
         public DbSet<MeetingUserMap> MeetingUserMaps { get; set; }
@@ -19,6 +20,17 @@ namespace MoM.Api.Models
             modelBuilder.Entity<AppUser>()
                 .HasIndex(u => u.UserName)
                 .IsUnique();
+
+            modelBuilder.Entity<AuthUser>()
+                .HasIndex(u => u.UserName)
+                .IsUnique();
+
+            modelBuilder.Entity<AuthUser>()
+                .HasMany<Meeting>()
+                .WithOne(m => m.CreatedByAuthUser)
+                .HasForeignKey(m => m.CreatedByAuthUserId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Venue>()
                 .HasIndex(v => v.VenueName)

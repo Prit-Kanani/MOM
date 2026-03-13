@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MoM.Api.Models;
+using MoM.Api.Services;
 using QuestPDF.Infrastructure;
 using Scalar.AspNetCore;
 
@@ -18,6 +19,14 @@ builder.Services.AddDbContext<MomContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<MoM.Api.Services.PdfService>();
+builder.Services.AddScoped<PasswordHasher>();
+builder.Services.AddSingleton<TokenService>();
+
+builder.Services
+    .AddAuthentication("MomBearer")
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, BearerTokenAuthenticationHandler>("MomBearer", _ => { });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -53,6 +62,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

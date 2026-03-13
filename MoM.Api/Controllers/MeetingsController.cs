@@ -1,12 +1,15 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MoM.Api.Models;
+using System.Security.Claims;
 using System.Globalization;
 
 namespace MoM.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class MeetingsController : ControllerBase
     {
         private readonly MomContext _context;
@@ -19,8 +22,10 @@ namespace MoM.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MeetingSummaryDto>>> GetMeetings()
         {
+            var currentUserId = GetCurrentUserId();
             var meetings = await _context.Meetings
                 .AsNoTracking()
+                .Where(m => m.CreatedByAuthUserId == currentUserId)
                 .Include(m => m.VenueMappings)
                     .ThenInclude(v => v.Venue)
                 .Include(m => m.UserMappings)
@@ -33,8 +38,10 @@ namespace MoM.Api.Controllers
         [HttpGet("stats")]
         public async Task<ActionResult<MeetingStatsDto>> GetStats([FromQuery] string? period = "month")
         {
+            var currentUserId = GetCurrentUserId();
             var meetings = await _context.Meetings
                 .AsNoTracking()
+                .Where(m => m.CreatedByAuthUserId == currentUserId)
                 .Include(m => m.VenueMappings)
                     .ThenInclude(v => v.Venue)
                 .Include(m => m.UserMappings)
@@ -149,6 +156,7 @@ namespace MoM.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<MeetingDto>> GetMeeting(int id)
         {
+            var currentUserId = GetCurrentUserId();
             var meeting = await _context.Meetings
                 .AsNoTracking()
                 .Include(m => m.VenueMappings)
@@ -159,7 +167,7 @@ namespace MoM.Api.Controllers
                     .ThenInclude(a => a.OwnerUser)
                 .Include(m => m.ActionItems)
                     .ThenInclude(a => a.ResponsibilityUser)
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id && m.CreatedByAuthUserId == currentUserId);
 
             if (meeting is null)
             {
@@ -178,6 +186,7 @@ namespace MoM.Api.Controllers
             }
 
             var entity = await meeting.ToEntityAsync(_context);
+            entity.CreatedByAuthUserId = GetCurrentUserId();
             _context.Meetings.Add(entity);
             await _context.SaveChangesAsync();
 
@@ -193,6 +202,7 @@ namespace MoM.Api.Controllers
                 return ValidationProblem(ModelState);
             }
 
+            var currentUserId = GetCurrentUserId();
             var existingMeeting = await _context.Meetings
                 .Include(m => m.VenueMappings)
                 .Include(m => m.UserMappings)
@@ -201,7 +211,7 @@ namespace MoM.Api.Controllers
                     .ThenInclude(a => a.OwnerUser)
                 .Include(m => m.ActionItems)
                     .ThenInclude(a => a.ResponsibilityUser)
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id && m.CreatedByAuthUserId == currentUserId);
 
             if (existingMeeting is null)
             {
@@ -217,7 +227,9 @@ namespace MoM.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteMeeting(int id)
         {
-            var meeting = await _context.Meetings.FindAsync(id);
+            var currentUserId = GetCurrentUserId();
+            var meeting = await _context.Meetings
+                .FirstOrDefaultAsync(m => m.Id == id && m.CreatedByAuthUserId == currentUserId);
             if (meeting is null)
             {
                 return NotFound();
@@ -287,6 +299,7 @@ namespace MoM.Api.Controllers
 
         private Task<Meeting?> LoadMeetingGraphAsync(int id)
         {
+            var currentUserId = GetCurrentUserId();
             return _context.Meetings
                 .AsNoTracking()
                 .Include(m => m.VenueMappings)
@@ -297,7 +310,18 @@ namespace MoM.Api.Controllers
                     .ThenInclude(a => a.OwnerUser)
                 .Include(m => m.ActionItems)
                     .ThenInclude(a => a.ResponsibilityUser)
-                .FirstOrDefaultAsync(m => m.Id == id);
+                .FirstOrDefaultAsync(m => m.Id == id && m.CreatedByAuthUserId == currentUserId);
+        }
+
+        private int GetCurrentUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(claim, out var userId))
+            {
+                throw new UnauthorizedAccessException("Authenticated user id is missing.");
+            }
+
+            return userId;
         }
     }
 }

@@ -1,0 +1,45 @@
+@model MoM.Web.Models.RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<section class="auth-shell">
+    <div class="auth-card glass-card">
+        <div>
+            <div class="hero-kicker">Create Access</div>
+            <h1>Create your MOM account</h1>
+            <p>Register once to manage meetings, attendance, analytics, previews, and PDF exports.</p>
+        </div>
+
+        <form asp-action="Register" method="post" class="auth-form">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="auth-validation"></div>
+
+            <div class="form-group">
+                <label asp-for="UserName" class="form-label"></label>
+                <input asp-for="UserName" class="form-input" autocomplete="username" />
+                <span asp-validation-for="UserName" class="field-validation"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Password" class="form-label"></label>
+                <input asp-for="Password" class="form-input" autocomplete="new-password" />
+                <span asp-validation-for="Password" class="field-validation"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="ConfirmPassword" class="form-label"></label>
+                <input asp-for="ConfirmPassword" class="form-input" autocomplete="new-password" />
+                <span asp-validation-for="ConfirmPassword" class="field-validation"></span>
+            </div>
+
+            <button type="submit" class="btn-primary auth-submit">Register</button>
+        </form>
+
+        <div class="auth-footer-copy">
+            Already have an account?
+            <a asp-action="Login">Login</a>
+        </div>
+    </div>
+</section>
