@@ -220,7 +220,13 @@
         }
 
         function removeRow(button) {
-            button.parentElement.remove();
+            const row = button.closest('.dynamic-list-row');
+            if (!row) {
+                return;
+            }
+
+            closeLookupMenus();
+            row.remove();
         }
 
         function getLookupItems(type) {

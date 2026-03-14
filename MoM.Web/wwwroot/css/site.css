@@ -713,14 +713,16 @@ main.container {
     align-items: center;
     gap: 16px;
     margin-bottom: 18px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .vault-search {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    margin-left: auto;
+    flex: 0 1 auto;
 }
 
 .vault-search-btn {
@@ -746,7 +748,8 @@ main.container {
 }
 
 .vault-search-shell {
-    min-width: min(100%, 320px);
+    width: 320px;
+    min-width: 320px;
     display: flex;
     align-items: center;
     gap: 10px;

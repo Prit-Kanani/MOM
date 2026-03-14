@@ -23,9 +23,16 @@ Thumbs.db
 
 # Local tool/cache folders
 .dotnet/
+.pyuser/
 
 # Generated publish artifacts
 publish/
+
+# Local temp/debug artifacts
+.tempbuild/
+*.tmp
+*_page*.png
+the_new_pdf_img.png
 
 # Entity Framework generated database files if local
 *.mdf
