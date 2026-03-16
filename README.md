@@ -30,6 +30,7 @@ MOM/
 |-- MoM.sln           Full solution
 |-- README.md
 |-- .gitignore
+|-- script.sql
 ```
 
 ## Technology Stack
